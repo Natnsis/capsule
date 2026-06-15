@@ -30,10 +30,10 @@ export default function TabLayout() {
       screenOptions={{ headerShown: false }}
       tabBar={({}) => (
         <View
-          className="absolute bottom-0 left-0 right-0 items-center pb-2"
-          style={{ paddingBottom: insets.bottom + 8 }}
+          className="absolute bottom-0 left-0 right-0 items-center pb-3"
+          style={{ paddingBottom: insets.bottom + 10 }}
         >
-          <View className="flex-row items-center bg-brown dark:bg-[#2E282A] rounded-full px-6 py-2 gap-2 shadow-lg">
+          <View className="flex-row items-center bg-[#41393C] dark:bg-[#2E282A] rounded-full px-3 py-2 gap-1 shadow-lg shadow-black/20">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = currentTab === tab.name;
@@ -42,16 +42,16 @@ export default function TabLayout() {
                 <TouchableOpacity
                   key={tab.name}
                   onPress={() => navigateToTab(tab.name)}
-                  className={`flex-row items-center rounded-full px-4 py-2 ${
+                  className={`flex-row items-center rounded-full px-5 py-2.5 ${
                     isActive ? "bg-sage" : ""
                   }`}
                 >
                   <Icon
-                    size={18}
+                    size={20}
                     color={isActive ? "#F2EFEA" : "#7A6E71"}
                   />
                   {isActive && (
-                    <Text className="text-cream font-sans text-sm font-semibold ml-2">
+                    <Text className="text-[#F2EFEA] font-sans text-sm font-semibold ml-2">
                       {tab.title}
                     </Text>
                   )}

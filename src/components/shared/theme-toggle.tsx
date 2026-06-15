@@ -3,7 +3,9 @@ import { Sun, Moon } from "lucide-react-native";
 import { useThemeStore } from "@/stores/theme-store";
 
 export function ThemeToggle() {
-  const { isDark, setDark } = useThemeStore();
+  const mode = useThemeStore((s) => s.mode);
+  const setDark = useThemeStore((s) => s.setDark);
+  const isDark = mode === "dark";
 
   return (
     <TouchableOpacity

@@ -13,10 +13,10 @@ export function SearchBar({
   placeholder = "Search capsules...",
 }: SearchBarProps) {
   return (
-    <View className="flex-row items-center bg-muted rounded-full px-4 py-3 mx-4">
-      <Search size={18} color="#7A6E71" className="mr-3" />
+    <View className="flex-row items-center bg-[#E4E0DA] dark:bg-[#5E4F53] rounded-2xl px-4 py-2.5">
+      <Search size={16} color="#7A6E71" />
       <TextInput
-        className="flex-1 font-sans text-brown dark:text-cream text-base"
+        className="flex-1 font-sans text-[#41393C] dark:text-[#F2EFEA] text-sm ml-2.5"
         placeholder={placeholder}
         placeholderTextColor="#7A6E71"
         value={value}

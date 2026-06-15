@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { View, Text, ScrollView } from "react-native";
+import { useState, useCallback } from "react";
+import { View, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -18,7 +18,7 @@ export default function ArchiveScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Capsule[] | null>(null);
 
-  const handleSearch = async (query: string) => {
+  const handleSearch = useCallback(async (query: string) => {
     setSearchQuery(query);
     if (query.trim().length === 0) {
       setSearchResults(null);
@@ -26,7 +26,7 @@ export default function ArchiveScreen() {
     }
     const results = await searchCapsules(query);
     setSearchResults(results);
-  };
+  }, [searchCapsules]);
 
   const displayCapsules = searchResults ?? openedCapsules ?? [];
 
@@ -35,13 +35,7 @@ export default function ArchiveScreen() {
       className="flex-1 bg-[#F2EFEA] dark:bg-[#41393C]"
       contentContainerStyle={{ paddingBottom: 120 }}
     >
-      <View style={{ paddingTop: insets.top + 16 }} className="px-4 pb-4">
-        <Text className="font-heading text-3xl font-bold text-[#41393C] dark:text-[#F2EFEA] mb-1">
-          Archive
-        </Text>
-        <Text className="font-sans text-base text-[#7A6E71] mb-4">
-          Memories you've already opened
-        </Text>
+      <View style={{ paddingTop: insets.top + 12 }} className="px-4 pb-2">
         <SearchBar
           value={searchQuery}
           onChangeText={handleSearch}
@@ -52,7 +46,7 @@ export default function ArchiveScreen() {
       {displayCapsules.length === 0 ? (
         <EmptyState type="opened" />
       ) : (
-        <View className="px-4 gap-4">
+        <View className="px-4 gap-4 mt-4">
           {displayCapsules.map((capsule: Capsule) => (
             <CapsuleCard
               key={capsule.id}

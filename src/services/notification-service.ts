@@ -2,25 +2,19 @@ type NotificationsModule = typeof import("expo-notifications");
 
 let Notifications: NotificationsModule | null = null;
 let initAttempted = false;
+let isExpoGo = false;
 
-function isExpoGo(): boolean {
-  try {
-    const Constants = require("expo-constants");
-    const appOwnership = Constants.default?.appOwnership ?? Constants.appOwnership;
-    return appOwnership === "expo";
-  } catch {
-    return false;
-  }
-}
+try {
+  const Constants = require("expo-constants");
+  const c = Constants.default ?? Constants;
+  isExpoGo = c.appOwnership === "expo";
+} catch {}
 
 async function getNotifications(): Promise<NotificationsModule | null> {
   if (initAttempted) return Notifications;
   initAttempted = true;
 
-  if (isExpoGo()) {
-    console.warn("expo-notifications: disabled in Expo Go");
-    return null;
-  }
+  if (isExpoGo) return null;
 
   try {
     const mod = await import("expo-notifications");
@@ -37,8 +31,7 @@ async function getNotifications(): Promise<NotificationsModule | null> {
 
     Notifications = mod;
     return mod;
-  } catch (e) {
-    console.warn("expo-notifications not available:", (e as Error)?.message ?? e);
+  } catch {
     return null;
   }
 }
@@ -48,14 +41,10 @@ export const NotificationService = {
     const mod = await getNotifications();
     if (!mod) return false;
 
-    try {
-      const { status: existing } = await mod.getPermissionsAsync();
-      if (existing === "granted") return true;
-      const { status } = await mod.requestPermissionsAsync();
-      return status === "granted";
-    } catch {
-      return false;
-    }
+    const { status: existing } = await mod.getPermissionsAsync();
+    if (existing === "granted") return true;
+    const { status } = await mod.requestPermissionsAsync();
+    return status === "granted";
   },
 
   async scheduleCapsuleReminder(

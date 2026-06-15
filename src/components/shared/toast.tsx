@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
-import { Text, Animated } from "react-native";
-import { CheckCircle, XCircle, Info } from "lucide-react-native";
+import { Text, Animated, Image } from "react-native";
+import { CheckCircle, XCircle } from "lucide-react-native";
 
 type ToastVariant = "success" | "error" | "info";
 
@@ -12,22 +12,10 @@ interface ToastProps {
   duration?: number;
 }
 
-const icons = {
-  success: CheckCircle,
-  error: XCircle,
-  info: Info,
-};
-
-const bgColors = {
+const bgColors: Record<ToastVariant, string> = {
   success: "bg-sage",
   error: "bg-red-500",
-  info: "bg-brown dark:bg-[#5E4F53]",
-};
-
-const textColors = {
-  success: "text-cream",
-  error: "text-white",
-  info: "text-cream",
+  info: "bg-[#4E4449]",
 };
 
 export function Toast({
@@ -43,30 +31,14 @@ export function Toast({
   useEffect(() => {
     if (visible) {
       Animated.parallel([
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(translateY, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
+        Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+        Animated.timing(translateY, { toValue: 0, duration: 200, useNativeDriver: true }),
       ]).start();
 
       const timer = setTimeout(() => {
         Animated.parallel([
-          Animated.timing(opacity, {
-            toValue: 0,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-          Animated.timing(translateY, {
-            toValue: -20,
-            duration: 200,
-            useNativeDriver: true,
-          }),
+          Animated.timing(opacity, { toValue: 0, duration: 200, useNativeDriver: true }),
+          Animated.timing(translateY, { toValue: -20, duration: 200, useNativeDriver: true }),
         ]).start(() => onHide());
       }, duration);
 
@@ -76,18 +48,19 @@ export function Toast({
 
   if (!visible) return null;
 
-  const Icon = icons[variant];
+  const Icon = variant === "success" ? CheckCircle : variant === "error" ? XCircle : null;
 
   return (
     <Animated.View
       className={`absolute top-16 left-4 right-4 z-50 flex-row items-center ${bgColors[variant]} rounded-2xl px-4 py-3 shadow-lg`}
-      style={{
-        opacity,
-        transform: [{ translateY }],
-      }}
+      style={{ opacity, transform: [{ translateY }] }}
     >
-      <Icon size={20} color="#F2EFEA" />
-      <Text className={`font-sans text-sm font-medium ${textColors[variant]} ml-3 flex-1`}>
+      {Icon ? (
+        <Icon size={20} color="#F2EFEA" />
+      ) : (
+        <Image source={require("@/../assets/images/logo.png")} className="w-5 h-5" resizeMode="contain" />
+      )}
+      <Text className="font-sans text-sm font-medium text-[#F2EFEA] ml-3 flex-1">
         {message}
       </Text>
     </Animated.View>
