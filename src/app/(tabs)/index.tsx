@@ -1,21 +1,27 @@
-import { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-} from "react-native";
+import { useState } from "react";
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from "react-native";
 import { useRouter } from "expo-router";
-import { Plus, Clock, Inbox, Archive } from "lucide-react-native";
+import {
+  Plus,
+  Clock,
+  Inbox,
+  Archive,
+  Sparkles,
+  Lock,
+  Timer,
+} from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import type { Capsule } from "@/types/capsule";
-import { useCapsules, useCapsuleStats, useCheckReadyCapsules } from "@/hooks/use-capsules";
+import type { Capsule, CapsuleStatus } from "@/types/capsule";
+import {
+  useCapsules,
+  useCapsuleStats,
+  useCheckReadyCapsules,
+} from "@/hooks/use-capsules";
+import { useProfileStore } from "@/stores/profile-store";
 import { CapsuleCard } from "@/components/capsules/capsule-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Badge } from "@/components/ui/badge";
-import type { CapsuleStatus } from "@/types/capsule";
 
 type FilterType = CapsuleStatus | "all";
 
@@ -32,9 +38,10 @@ export default function HomeScreen() {
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
   const [refreshing, setRefreshing] = useState(false);
 
-  const { data: capsules, isLoading, refetch } = useCapsules();
+  const { data: capsules, refetch } = useCapsules();
   const { data: stats } = useCapsuleStats();
   const checkReady = useCheckReadyCapsules();
+  const { name } = useProfileStore();
 
   const filteredCapsules = capsules?.filter((c: Capsule) =>
     activeFilter === "all" ? true : c.status === activeFilter
@@ -52,7 +59,7 @@ export default function HomeScreen() {
 
   return (
     <ScrollView
-      className="flex-1 bg-cream dark:bg-brown"
+      className="flex-1 bg-[#F2EFEA] dark:bg-[#41393C]"
       contentContainerStyle={{ paddingBottom: 120 }}
       refreshControl={
         <RefreshControl
@@ -63,52 +70,55 @@ export default function HomeScreen() {
       }
     >
       <View style={{ paddingTop: insets.top + 16 }} className="px-4 pb-2">
-        <View className="flex-row items-center justify-between mb-1">
-          <Text className="font-heading text-3xl font-bold text-brown dark:text-cream">
-            TimeCapsule
-          </Text>
-          <View className="bg-sage/20 rounded-full w-10 h-10 items-center justify-center">
-            <Text className="font-heading text-lg text-sage font-bold">
-              T
+        {/* Header */}
+        <View className="flex-row items-center justify-between mb-2">
+          <View>
+            <Text className="font-heading text-3xl font-bold text-[#41393C] dark:text-[#F2EFEA]">
+              TimeCapsule
+            </Text>
+            <Text className="font-sans text-sm text-[#7A6E71] mt-0.5">
+              {sealedCount > 0
+                ? `${sealedCount} sealed · ${readyCount} ready`
+                : "Write to your future self"}
             </Text>
           </View>
-        </View>
-
-        <Text className="font-sans text-base text-muted-foreground mb-4">
-          {sealedCount > 0
-            ? `You have ${sealedCount} sealed capsule${sealedCount > 1 ? "s" : ""}${readyCount > 0 ? ` and ${readyCount} ready to open` : ""}`
-            : "Write a message to your future self"}
-        </Text>
-
-        <View className="flex-row gap-3 mb-6">
-          {readyCount > 0 && (
-            <TouchableOpacity
-              onPress={() => setActiveFilter("ready")}
-              className="flex-1 bg-sage rounded-2xl p-4"
-            >
-              <Inbox size={24} color="#F2EFEA" />
-              <Text className="font-heading text-2xl font-bold text-cream mt-2">
-                {readyCount}
-              </Text>
-              <Text className="font-sans text-sm text-cream/80">
-                Ready to open
-              </Text>
-            </TouchableOpacity>
-          )}
           <TouchableOpacity
-            onPress={() => setActiveFilter("sealed")}
-            className={`${readyCount > 0 ? "flex-1" : "flex-1"} bg-muted rounded-2xl p-4`}
+            onPress={() => router.push("/(tabs)/settings")}
+            className="w-11 h-11 rounded-full bg-sage items-center justify-center"
           >
-            <Clock size={24} color="#7A6E71" />
-            <Text className="font-heading text-2xl font-bold text-brown dark:text-cream mt-2">
-              {sealedCount}
-            </Text>
-            <Text className="font-sans text-sm text-muted-foreground">
-              Sealed
+            <Text className="font-heading text-lg font-bold text-[#F2EFEA]">
+              {(name || "G").charAt(0).toUpperCase()}
             </Text>
           </TouchableOpacity>
         </View>
 
+        {/* Stats row */}
+        <View className="flex-row gap-3 mb-6 mt-3">
+          <TouchableOpacity
+            onPress={() => setActiveFilter("ready")}
+            className="flex-1 bg-sage rounded-2xl p-4"
+          >
+            <Inbox size={22} color="#F2EFEA" />
+            <Text className="font-heading text-2xl font-bold text-[#F2EFEA] mt-2">
+              {readyCount}
+            </Text>
+            <Text className="font-sans text-xs text-[#F2EFEA]/70">
+              Ready to open
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setActiveFilter("sealed")}
+            className="flex-1 bg-[#E4E0DA] dark:bg-[#5E4F53] rounded-2xl p-4"
+          >
+            <Lock size={22} color="#7A6E71" />
+            <Text className="font-heading text-2xl font-bold text-[#41393C] dark:text-[#F2EFEA] mt-2">
+              {sealedCount}
+            </Text>
+            <Text className="font-sans text-xs text-[#7A6E71]">Sealed</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Filters */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -116,10 +126,7 @@ export default function HomeScreen() {
         >
           <View className="flex-row gap-2 px-1">
             {filters.map((f) => (
-              <TouchableOpacity
-                key={f.key}
-                onPress={() => setActiveFilter(f.key)}
-              >
+              <TouchableOpacity key={f.key} onPress={() => setActiveFilter(f.key)}>
                 <Badge
                   variant={activeFilter === f.key ? "active" : "outline"}
                   label={f.label}
@@ -130,6 +137,7 @@ export default function HomeScreen() {
         </ScrollView>
       </View>
 
+      {/* Capsule list */}
       {!filteredCapsules || filteredCapsules.length === 0 ? (
         <EmptyState
           type={
@@ -141,7 +149,7 @@ export default function HomeScreen() {
           }
         />
       ) : (
-        <View className="px-4 gap-3">
+        <View className="px-4 gap-4">
           {filteredCapsules.map((capsule: Capsule) => (
             <CapsuleCard
               key={capsule.id}
@@ -152,9 +160,10 @@ export default function HomeScreen() {
         </View>
       )}
 
+      {/* FAB */}
       <TouchableOpacity
         onPress={() => router.push("/create")}
-        className="absolute bottom-6 right-4 bg-sage rounded-full w-14 h-14 items-center justify-center shadow-lg"
+        className="absolute bottom-6 right-6 bg-sage rounded-full w-14 h-14 items-center justify-center shadow-lg shadow-sage/30"
       >
         <Plus size={28} color="#F2EFEA" />
       </TouchableOpacity>

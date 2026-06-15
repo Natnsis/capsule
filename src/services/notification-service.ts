@@ -3,9 +3,25 @@ type NotificationsModule = typeof import("expo-notifications");
 let Notifications: NotificationsModule | null = null;
 let initAttempted = false;
 
+function isExpoGo(): boolean {
+  try {
+    const Constants = require("expo-constants");
+    const appOwnership = Constants.default?.appOwnership ?? Constants.appOwnership;
+    return appOwnership === "expo";
+  } catch {
+    return false;
+  }
+}
+
 async function getNotifications(): Promise<NotificationsModule | null> {
   if (initAttempted) return Notifications;
   initAttempted = true;
+
+  if (isExpoGo()) {
+    console.warn("expo-notifications: disabled in Expo Go");
+    return null;
+  }
+
   try {
     const mod = await import("expo-notifications");
 
@@ -22,7 +38,7 @@ async function getNotifications(): Promise<NotificationsModule | null> {
     Notifications = mod;
     return mod;
   } catch (e) {
-    console.warn("expo-notifications not available:", e);
+    console.warn("expo-notifications not available:", (e as Error)?.message ?? e);
     return null;
   }
 }
@@ -35,7 +51,6 @@ export const NotificationService = {
     try {
       const { status: existing } = await mod.getPermissionsAsync();
       if (existing === "granted") return true;
-
       const { status } = await mod.requestPermissionsAsync();
       return status === "granted";
     } catch {
@@ -77,7 +92,6 @@ export const NotificationService = {
   async cancelReminder(notificationId: string): Promise<void> {
     const mod = await getNotifications();
     if (!mod) return;
-
     try {
       await mod.cancelScheduledNotificationAsync(notificationId);
     } catch {}
@@ -86,7 +100,6 @@ export const NotificationService = {
   async cancelAll(): Promise<void> {
     const mod = await getNotifications();
     if (!mod) return;
-
     try {
       await mod.cancelAllScheduledNotificationsAsync();
     } catch {}
@@ -101,9 +114,7 @@ export const NotificationService = {
         (response: any) => {
           const capsuleId = response.notification.request.content.data
             ?.capsuleId as string;
-          if (capsuleId) {
-            callback(capsuleId);
-          }
+          if (capsuleId) callback(capsuleId);
         }
       );
       return subscription;
