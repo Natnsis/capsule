@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -36,7 +36,7 @@ export default function SettingsScreen() {
   const { name, setName } = useProfileStore();
   const { data: stats } = useCapsuleStats();
 
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(name);
   const [toast, setToast] = useState<{
@@ -44,6 +44,11 @@ export default function SettingsScreen() {
     variant: "success" | "error" | "info";
   } | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  // Sync switch with actual OS permission state on mount
+  useEffect(() => {
+    NotificationService.checkPermission().then(setNotificationsEnabled);
+  }, []);
 
   const handleSaveName = () => {
     const trimmed = nameInput.trim();

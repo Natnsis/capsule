@@ -17,7 +17,9 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useThemeStore } from "@/stores/theme-store";
 import { useBiometricStore } from "@/stores/biometric-store";
 import { useOnboardingStore } from "@/stores/onboarding-store";
+import { useNotificationStore } from "@/stores/notification-store";
 import { CapsuleRepository } from "@/db/repositories/capsule-repository";
+import { NotificationService } from "@/services/notification-service";
 import { LockScreen } from "@/components/shared/lock-screen";
 
 import "../global.css";
@@ -32,6 +34,7 @@ export default function RootLayout() {
   const mode = useThemeStore((s) => s.mode);
   const biometricEnabled = useBiometricStore((s) => s.enabled);
   const { completed: onboardingCompleted } = useOnboardingStore();
+  const { prompted, setPrompted } = useNotificationStore();
   const { colorScheme: nwScheme, setColorScheme } = useColorScheme();
 
   const [fontsLoaded] = useFonts({
@@ -75,6 +78,16 @@ export default function RootLayout() {
       if (biometricEnabled) setLocked(true);
     })();
   }, [fontsLoaded]);
+
+  // Fire OS notification permission request once, after onboarding
+  useEffect(() => {
+    if (!booted) return;
+    if (!onboardingCompleted) return;
+    if (prompted) return;
+    if (locked) return;
+    setPrompted();
+    NotificationService.requestPermission();
+  }, [booted, onboardingCompleted, prompted, locked]);
 
   useEffect(() => {
     if (!booted) return;

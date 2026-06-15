@@ -37,6 +37,13 @@ async function getNotifications(): Promise<NotificationsModule | null> {
 }
 
 export const NotificationService = {
+  async checkPermission(): Promise<boolean> {
+    const mod = await getNotifications();
+    if (!mod) return false;
+    const { status } = await mod.getPermissionsAsync();
+    return status === "granted";
+  },
+
   async requestPermission(): Promise<boolean> {
     const mod = await getNotifications();
     if (!mod) return false;
