@@ -37,6 +37,7 @@ export default function SettingsScreen() {
   const { data: stats } = useCapsuleStats();
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(name);
   const [toast, setToast] = useState<{
@@ -48,6 +49,7 @@ export default function SettingsScreen() {
   // Sync switch with actual OS permission state on mount
   useEffect(() => {
     NotificationService.checkPermission().then(setNotificationsEnabled);
+    BiometricService.isAvailable().then(setBiometricAvailable);
   }, []);
 
   const handleSaveName = () => {
@@ -244,25 +246,27 @@ export default function SettingsScreen() {
         </View>
 
         {/* Biometrics */}
-        <View className="mb-6">
-          <Text className="font-heading text-sm font-semibold text-[#5A6072] uppercase tracking-wider mb-3 px-1">
-            Security
-          </Text>
-          <View className="bg-[#EEF0F3] dark:bg-[#1C2027] rounded-2xl overflow-hidden border border-[#C9CFD8]/50">
-            <View className="flex-row items-center px-4 py-4">
-              <Fingerprint size={20} color="#5A6072" />
-              <Text className="flex-1 font-sans text-base ml-3 text-[#181B21] dark:text-[#EEF0F3]">
-                Lock with Biometrics
-              </Text>
-              <Switch
-                value={biometricEnabled}
-                onValueChange={handleToggleBiometric}
-                trackColor={{ false: "#C9CFD8", true: "#3B608F" }}
-                thumbColor="#EEF0F3"
-              />
+        {biometricAvailable && (
+          <View className="mb-6">
+            <Text className="font-heading text-sm font-semibold text-[#5A6072] uppercase tracking-wider mb-3 px-1">
+              Security
+            </Text>
+            <View className="bg-[#EEF0F3] dark:bg-[#1C2027] rounded-2xl overflow-hidden border border-[#C9CFD8]/50">
+              <View className="flex-row items-center px-4 py-4">
+                <Fingerprint size={20} color="#5A6072" />
+                <Text className="flex-1 font-sans text-base ml-3 text-[#181B21] dark:text-[#EEF0F3]">
+                  Unlock Biometric Sealing
+                </Text>
+                <Switch
+                  value={biometricEnabled}
+                  onValueChange={handleToggleBiometric}
+                  trackColor={{ false: "#C9CFD8", true: "#3B608F" }}
+                  thumbColor="#EEF0F3"
+                />
+              </View>
             </View>
           </View>
-        </View>
+        )}
 
         {/* Danger Zone */}
         <View className="mb-6">

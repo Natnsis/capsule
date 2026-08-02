@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { View, ActivityIndicator, AppState } from "react-native";
+import { View, ActivityIndicator } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useColorScheme } from "nativewind";
@@ -15,13 +15,11 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { useThemeStore } from "@/stores/theme-store";
-import { useBiometricStore } from "@/stores/biometric-store";
 import { useOnboardingStore } from "@/stores/onboarding-store";
 import { useNotificationStore } from "@/stores/notification-store";
 import { CapsuleRepository } from "@/db/repositories/capsule-repository";
 import { NotificationService } from "@/services/notification-service";
 import { reconcileCapsuleReminders } from "@/hooks/use-capsules";
-import { LockScreen } from "@/components/shared/lock-screen";
 
 import "../global.css";
 
@@ -33,7 +31,6 @@ export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
   const mode = useThemeStore((s) => s.mode);
-  const biometricEnabled = useBiometricStore((s) => s.enabled);
   const { completed: onboardingCompleted } = useOnboardingStore();
   const { prompted, setPrompted } = useNotificationStore();
   const { colorScheme: nwScheme, setColorScheme } = useColorScheme();
@@ -44,7 +41,6 @@ export default function RootLayout() {
     Outfit_700Bold,
   });
 
-  const [locked, setLocked] = useState(false);
   const [booted, setBooted] = useState(false);
   const bootedRef = useRef(false);
 
@@ -59,16 +55,6 @@ export default function RootLayout() {
     return unsub;
   }, []);
 
-  // App lifecycle — lock on background when biometrics enabled
-  useEffect(() => {
-    const sub = AppState.addEventListener("change", (state) => {
-      if (biometricEnabled && bootedRef.current && state === "active") {
-        setLocked(true);
-      }
-    });
-    return () => sub.remove();
-  }, [biometricEnabled]);
-
   useEffect(() => {
     if (!fontsLoaded) return;
     (async () => {
@@ -76,7 +62,6 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
       bootedRef.current = true;
       setBooted(true);
-      if (biometricEnabled) setLocked(true);
       reconcileCapsuleReminders();
     })();
   }, [fontsLoaded]);
@@ -105,10 +90,9 @@ export default function RootLayout() {
     if (!booted) return;
     if (!onboardingCompleted) return;
     if (prompted) return;
-    if (locked) return;
     setPrompted();
     NotificationService.requestPermission();
-  }, [booted, onboardingCompleted, prompted, locked]);
+  }, [booted, onboardingCompleted, prompted]);
 
   useEffect(() => {
     if (!booted) return;
@@ -124,10 +108,6 @@ export default function RootLayout() {
         <ActivityIndicator size="large" color="#3B608F" />
       </View>
     );
-  }
-
-  if (locked && biometricEnabled) {
-    return <LockScreen onUnlock={() => setLocked(false)} />;
   }
 
   return (

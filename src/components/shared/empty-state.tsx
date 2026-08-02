@@ -1,7 +1,8 @@
 import { View, Text } from "react-native";
-import { Inbox, Clock, Archive } from "lucide-react-native";
+import { Inbox, Clock, Archive, PenLine } from "lucide-react-native";
 
 const icons = {
+  draft: PenLine,
   sealed: Clock,
   ready: Inbox,
   opened: Archive,
@@ -16,6 +17,10 @@ interface EmptyStateProps {
 }
 
 const defaults: Record<EmptyStateType, { title: string; subtitle: string }> = {
+  draft: {
+    title: "No drafts",
+    subtitle: "Save a capsule as a draft to keep previewing it before you seal it.",
+  },
   sealed: {
     title: "No sealed capsules",
     subtitle: "Write a message to your future self to get started.",

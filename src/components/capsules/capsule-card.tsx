@@ -1,8 +1,10 @@
 import { View, Text, TouchableOpacity, Image } from "react-native";
-import { Lock, Unlock, Archive, Timer } from "lucide-react-native";
+import { Lock, Unlock, Archive, Timer, PenLine } from "lucide-react-native";
 import type { Capsule } from "@/types/capsule";
 import { CountdownTimer } from "./countdown-timer";
 import { formatDate } from "@/lib/date";
+import { parseBlocks } from "@/lib/rich-text";
+import { RichTextView } from "@/components/shared/rich-text-view";
 
 interface CapsuleCardProps {
   capsule: Capsule;
@@ -10,6 +12,12 @@ interface CapsuleCardProps {
 }
 
 const statusConfig = {
+  draft: {
+    icon: PenLine,
+    label: "Draft",
+    gradient: "from-[#E8EAEE] to-[#E8EAEE]/80 dark:from-[#353C48] dark:to-[#353C48]/80",
+    borderColor: "border-[#C9CFD8]/50",
+  },
   sealed: {
     icon: Lock,
     label: "Sealed",
@@ -97,12 +105,7 @@ export function CapsuleCard({ capsule, onPress }: CapsuleCardProps) {
         {/* Content preview */}
         {capsule.content ? (
           <View className="bg-[#E8EAEE]/50 dark:bg-[#353C48]/50 rounded-xl px-3 py-2.5 mb-3">
-            <Text
-              className="font-sans text-sm text-[#5A6072] leading-5"
-              numberOfLines={2}
-            >
-              {capsule.content}
-            </Text>
+            <RichTextView blocks={parseBlocks(capsule.content)} compact />
           </View>
         ) : null}
 
@@ -136,10 +139,18 @@ export function CapsuleCard({ capsule, onPress }: CapsuleCardProps) {
         {/* Footer */}
         <View className="flex-row items-center justify-between pt-2.5 border-t border-[#C9CFD8]/50 dark:border-[#353C48]/50">
           <View className="flex-row items-center gap-1.5">
-            {capsule.status === "sealed" && (
-              <Timer size={12} color="#5A6072" />
+            {capsule.status === "draft" ? (
+              <Text className="font-sans text-xs text-[#5A6072]">
+                Not sealed yet
+              </Text>
+            ) : (
+              <>
+                {capsule.status === "sealed" && (
+                  <Timer size={12} color="#5A6072" />
+                )}
+                <CountdownTimer openAt={capsule.openAt} size="sm" />
+              </>
             )}
-            <CountdownTimer openAt={capsule.openAt} size="sm" />
           </View>
           {capsule.openedAt && (
             <Text className="font-sans text-xs text-[#5A6072]">

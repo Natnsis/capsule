@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from "react-native";
 import { useRouter } from "expo-router";
 import { Plus, Inbox, Lock } from "lucide-react-native";
@@ -11,14 +11,18 @@ import {
   useCheckReadyCapsules,
 } from "@/hooks/use-capsules";
 import { useProfileStore } from "@/stores/profile-store";
+import { useBiometricStore } from "@/stores/biometric-store";
+import { BiometricService } from "@/services/biometric-service";
 import { CapsuleCard } from "@/components/capsules/capsule-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Badge } from "@/components/ui/badge";
+import { Dialog } from "@/components/shared/dialog";
 
 type FilterType = CapsuleStatus | "all";
 
 const filters: { key: FilterType; label: string }[] = [
   { key: "all", label: "All" },
+  { key: "draft", label: "Draft" },
   { key: "sealed", label: "Sealed" },
   { key: "ready", label: "Ready" },
   { key: "opened", label: "Opened" },
@@ -34,6 +38,11 @@ export default function HomeScreen() {
   const { data: stats } = useCapsuleStats();
   const checkReady = useCheckReadyCapsules();
   const { name } = useProfileStore();
+  const biometricEnabled = useBiometricStore((s) => s.enabled);
+  const setBiometricEnabled = useBiometricStore((s) => s.setEnabled);
+  const promptedOnHome = useBiometricStore((s) => s.promptedOnHome);
+  const setPromptedOnHome = useBiometricStore((s) => s.setPromptedOnHome);
+  const [showBiometricAsk, setShowBiometricAsk] = useState(false);
 
   const filteredCapsules = capsules?.filter((c: Capsule) =>
     activeFilter === "all" ? true : c.status === activeFilter
@@ -49,7 +58,41 @@ export default function HomeScreen() {
     setRefreshing(false);
   };
 
+  // One-time ask: offer biometric capsule protection the first time the
+  // user lands on Home, if the device actually supports it.
+  useEffect(() => {
+    if (promptedOnHome || biometricEnabled) return;
+    BiometricService.isAvailable().then((available) => {
+      if (available) setShowBiometricAsk(true);
+      else setPromptedOnHome();
+    });
+  }, [promptedOnHome, biometricEnabled]);
+
+  const declineBiometricAsk = () => {
+    setShowBiometricAsk(false);
+    setPromptedOnHome();
+  };
+
+  const acceptBiometricAsk = async () => {
+    const ok = await BiometricService.authenticate();
+    if (ok) setBiometricEnabled(true);
+    setShowBiometricAsk(false);
+    setPromptedOnHome();
+  };
+
   return (
+    <>
+      <Dialog
+        visible={showBiometricAsk}
+        title="Protect your capsules?"
+        message="Face ID or fingerprint can lock individual capsules you choose to protect. You can always change this later in Settings."
+        onClose={declineBiometricAsk}
+        actions={[
+          { label: "Not now", variant: "cancel", onPress: declineBiometricAsk },
+          { label: "Enable", variant: "default", onPress: acceptBiometricAsk },
+        ]}
+      />
+
     <ScrollView
       className="flex-1 bg-[#EEF0F3] dark:bg-[#181B21]"
       contentContainerStyle={{ paddingBottom: 120 }}
@@ -135,9 +178,11 @@ export default function HomeScreen() {
           type={
             activeFilter === "all" || activeFilter === "sealed"
               ? "sealed"
-              : activeFilter === "ready"
-                ? "ready"
-                : "opened"
+              : activeFilter === "draft"
+                ? "draft"
+                : activeFilter === "ready"
+                  ? "ready"
+                  : "opened"
           }
         />
       ) : (
@@ -160,5 +205,6 @@ export default function HomeScreen() {
         <Plus size={28} color="#EEF0F3" />
       </TouchableOpacity>
     </ScrollView>
+    </>
   );
 }

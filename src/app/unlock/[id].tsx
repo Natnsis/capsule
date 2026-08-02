@@ -7,6 +7,8 @@ import { Fingerprint } from "lucide-react-native";
 import { useCapsule, useOpenCapsule } from "@/hooks/use-capsules";
 import { UnlockAnimation } from "@/components/animations/unlock-animation";
 import { Button } from "@/components/ui/button";
+import { RichTextView } from "@/components/shared/rich-text-view";
+import { parseBlocks } from "@/lib/rich-text";
 import { BiometricService } from "@/services/biometric-service";
 import { formatDate } from "@/lib/date";
 
@@ -135,9 +137,7 @@ export default function UnlockScreen() {
         </View>
 
         <View className="bg-cream dark:bg-[#1C2027] rounded-3xl p-6 w-full border border-border/50 mb-8">
-          <Text className="font-sans text-base text-brown dark:text-cream leading-7">
-            {capsule.content}
-          </Text>
+          <RichTextView blocks={parseBlocks(capsule.content)} />
         </View>
 
         {capsule.imageUris.length > 0 && (
