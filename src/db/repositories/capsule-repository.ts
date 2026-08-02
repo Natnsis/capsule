@@ -49,6 +49,7 @@ export const CapsuleRepository = {
     const db = await getDatabase();
     const id = generateId();
     const now = Date.now();
+    const status = input.status ?? "sealed";
     const persistedImageUris = await ImageService.persistImages(
       id,
       input.imageUris || []
@@ -56,13 +57,14 @@ export const CapsuleRepository = {
 
     await db.runAsync(
       `INSERT INTO capsules (id, title, content, created_at, open_at, status, tags, image_uris, notification_ids, require_biometric)
-       VALUES (?, ?, ?, ?, ?, 'sealed', ?, ?, '[]', ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, '[]', ?)`,
       [
         id,
         input.title,
         input.content,
         now,
         input.openAt,
+        status,
         JSON.stringify(input.tags || []),
         JSON.stringify(persistedImageUris),
         input.requireBiometric ? 1 : 0,
@@ -75,7 +77,7 @@ export const CapsuleRepository = {
       content: input.content,
       createdAt: now,
       openAt: input.openAt,
-      status: "sealed",
+      status,
       openedAt: null,
       tags: input.tags || [],
       imageUris: persistedImageUris,
@@ -91,6 +93,17 @@ export const CapsuleRepository = {
       "UPDATE capsules SET status = ?, opened_at = ? WHERE id = ?",
       [status, now, id]
     );
+  },
+
+  // Locks a draft: content becomes hidden again and the countdown to
+  // openAt starts, exactly like sealing at creation time.
+  async sealDraft(id: string): Promise<Capsule | null> {
+    const db = await getDatabase();
+    await db.runAsync(
+      "UPDATE capsules SET status = 'sealed' WHERE id = ? AND status = 'draft'",
+      [id]
+    );
+    return this.getById(id);
   },
 
   async setNotificationIds(id: string, notificationIds: string[]): Promise<void> {
@@ -127,6 +140,7 @@ export const CapsuleRepository = {
 
   async getStats(): Promise<{
     total: number;
+    drafts: number;
     sealed: number;
     ready: number;
     opened: number;
@@ -134,12 +148,14 @@ export const CapsuleRepository = {
     const db = await getDatabase();
     const row = await db.getFirstAsync<{
       total: number;
+      drafts: number;
       sealed: number;
       ready: number;
       opened: number;
     }>(
       `SELECT
          COUNT(*) as total,
+         SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END) as drafts,
          SUM(CASE WHEN status = 'sealed' THEN 1 ELSE 0 END) as sealed,
          SUM(CASE WHEN status = 'ready' THEN 1 ELSE 0 END) as ready,
          SUM(CASE WHEN status = 'opened' THEN 1 ELSE 0 END) as opened
@@ -147,6 +163,7 @@ export const CapsuleRepository = {
     );
     return {
       total: row?.total ?? 0,
+      drafts: row?.drafts ?? 0,
       sealed: row?.sealed ?? 0,
       ready: row?.ready ?? 0,
       opened: row?.opened ?? 0,

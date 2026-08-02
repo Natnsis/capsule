@@ -5,9 +5,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Fingerprint } from "lucide-react-native";
 
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/capsules/status-badge";
 import { SealAnimation } from "@/components/animations/seal-animation";
+import { RichTextView } from "@/components/shared/rich-text-view";
 import { formatDate } from "@/lib/date";
+import { parseBlocks } from "@/lib/rich-text";
 import { useCreateCapsule } from "@/hooks/use-capsules";
 import type { CreateCapsuleInput } from "@/types/capsule";
 
@@ -18,11 +19,13 @@ export default function PreviewScreen() {
   const createCapsule = useCreateCapsule();
 
   const [sealing, setSealing] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [now] = useState(() => Date.now());
 
   const title = params.title as string;
   const content = params.content as string;
+  const blocks = parseBlocks(content);
   const openAt = parseInt(params.openAt as string, 10);
   const tags = JSON.parse((params.tags as string) || "[]") as string[];
   const imageUris = JSON.parse(
@@ -41,6 +44,7 @@ export default function PreviewScreen() {
         tags,
         imageUris,
         requireBiometric,
+        status: "sealed",
       };
 
       await createCapsule.mutateAsync(input);
@@ -50,6 +54,30 @@ export default function PreviewScreen() {
     } catch {
       setSealing(false);
       setError("Failed to seal capsule. Please try again.");
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    setSavingDraft(true);
+    setError(null);
+
+    try {
+      const input: CreateCapsuleInput = {
+        title,
+        content,
+        openAt,
+        tags,
+        imageUris,
+        requireBiometric,
+        status: "draft",
+      };
+
+      await createCapsule.mutateAsync(input);
+
+      router.replace("/(tabs)");
+    } catch {
+      setSavingDraft(false);
+      setError("Failed to save draft. Please try again.");
     }
   };
 
@@ -75,16 +103,13 @@ export default function PreviewScreen() {
         </Text>
 
         <View className="bg-cream dark:bg-[#1C2027] rounded-2xl p-6 border border-border/50 mb-6">
-          <View className="flex-row items-start justify-between mb-4">
-            <Text className="font-heading text-2xl font-bold text-brown dark:text-cream flex-1 mr-2">
-              {title}
-            </Text>
-            <StatusBadge status="sealed" />
-          </View>
-
-          <Text className="font-sans text-base text-brown dark:text-cream leading-7 mb-6">
-            {content}
+          <Text className="font-heading text-2xl font-bold text-brown dark:text-cream mb-4">
+            {title}
           </Text>
+
+          <View className="mb-6">
+            <RichTextView blocks={blocks} />
+          </View>
 
           {imageUris.length > 0 && (
             <View className="flex-row flex-wrap gap-2 mb-4">
@@ -147,7 +172,18 @@ export default function PreviewScreen() {
           label="Seal Capsule"
           size="lg"
           onPress={handleSeal}
-          loading={createCapsule.isPending}
+          loading={sealing}
+          disabled={savingDraft}
+          className="w-full mb-3"
+        />
+
+        <Button
+          label="Save as Draft"
+          variant="outline"
+          size="lg"
+          onPress={handleSaveDraft}
+          loading={savingDraft}
+          disabled={sealing}
           className="w-full mb-4"
         />
 

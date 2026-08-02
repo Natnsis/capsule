@@ -67,6 +67,10 @@ export function useCreateCapsule() {
     mutationFn: async (input: CreateCapsuleInput): Promise<Capsule> => {
       const capsule = await CapsuleRepository.create(input);
 
+      // Drafts aren't locked yet, so there's nothing to count down to —
+      // reminders get scheduled when the draft is actually sealed.
+      if (capsule.status === "draft") return capsule;
+
       const notificationIds = await NotificationService.scheduleCapsuleReminders(
         capsule.id,
         capsule.title,
@@ -81,6 +85,34 @@ export function useCreateCapsule() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: CAPSULES_KEY });
+      queryClient.invalidateQueries({ queryKey: STATS_KEY });
+    },
+  });
+}
+
+export function useSealDraft() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string): Promise<Capsule | null> => {
+      const capsule = await CapsuleRepository.sealDraft(id);
+      if (!capsule) return null;
+
+      const notificationIds = await NotificationService.scheduleCapsuleReminders(
+        capsule.id,
+        capsule.title,
+        capsule.openAt
+      );
+
+      if (notificationIds.length > 0) {
+        await CapsuleRepository.setNotificationIds(capsule.id, notificationIds);
+      }
+
+      return { ...capsule, notificationIds };
+    },
+    onSuccess: (_data: Capsule | null, id: string) => {
+      queryClient.invalidateQueries({ queryKey: CAPSULES_KEY });
+      queryClient.invalidateQueries({ queryKey: CAPSULE_KEY(id) });
       queryClient.invalidateQueries({ queryKey: STATS_KEY });
     },
   });

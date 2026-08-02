@@ -1,4 +1,4 @@
-export type CapsuleStatus = "sealed" | "ready" | "opened";
+export type CapsuleStatus = "draft" | "sealed" | "ready" | "opened";
 
 export interface Capsule {
   id: string;
@@ -21,10 +21,12 @@ export interface CreateCapsuleInput {
   tags?: string[];
   imageUris?: string[];
   requireBiometric?: boolean;
+  status?: "draft" | "sealed";
 }
 
 export interface CapsuleStats {
   total: number;
+  drafts: number;
   sealed: number;
   ready: number;
   opened: number;
