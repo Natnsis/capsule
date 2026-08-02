@@ -67,17 +67,17 @@ export function useCreateCapsule() {
     mutationFn: async (input: CreateCapsuleInput): Promise<Capsule> => {
       const capsule = await CapsuleRepository.create(input);
 
-      const notificationId = await NotificationService.scheduleCapsuleReminder(
+      const notificationIds = await NotificationService.scheduleCapsuleReminders(
         capsule.id,
         capsule.title,
         capsule.openAt
       );
 
-      if (notificationId) {
-        await CapsuleRepository.setNotificationId(capsule.id, notificationId);
+      if (notificationIds.length > 0) {
+        await CapsuleRepository.setNotificationIds(capsule.id, notificationIds);
       }
 
-      return capsule;
+      return { ...capsule, notificationIds };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: CAPSULES_KEY });
@@ -91,6 +91,10 @@ export function useOpenCapsule() {
 
   return useMutation({
     mutationFn: async (id: string) => {
+      const capsule = await CapsuleRepository.getById(id);
+      if (capsule && capsule.notificationIds.length > 0) {
+        await NotificationService.cancelReminders(capsule.notificationIds);
+      }
       await CapsuleRepository.updateStatus(id, "opened");
     },
     onSuccess: (_data: void, id: string) => {
@@ -107,8 +111,8 @@ export function useDeleteCapsule() {
   return useMutation({
     mutationFn: async (id: string) => {
       const capsule = await CapsuleRepository.getById(id);
-      if (capsule?.notificationId) {
-        await NotificationService.cancelReminder(capsule.notificationId);
+      if (capsule && capsule.notificationIds.length > 0) {
+        await NotificationService.cancelReminders(capsule.notificationIds);
       }
       await CapsuleRepository.delete(id);
     },
@@ -129,4 +133,26 @@ export function useCheckReadyCapsules() {
       queryClient.invalidateQueries({ queryKey: STATS_KEY });
     },
   });
+}
+
+// Keeps ready-but-unopened capsules notifying beyond their initial scheduled
+// batch. Call on app boot/foreground: for any ready capsule with no pending
+// reminder left, queue one more nudge so it keeps interrupting the user
+// until they actually open it.
+export async function reconcileCapsuleReminders(): Promise<void> {
+  const readyCapsules = await CapsuleRepository.getByStatus("ready");
+  if (readyCapsules.length === 0) return;
+
+  const pendingCapsuleIds = await NotificationService.getPendingCapsuleIds();
+
+  for (const capsule of readyCapsules) {
+    if (pendingCapsuleIds.has(capsule.id)) continue;
+    const newId = await NotificationService.scheduleTopUpReminder(
+      capsule.id,
+      capsule.title
+    );
+    if (newId) {
+      await CapsuleRepository.addNotificationIds(capsule.id, [newId]);
+    }
+  }
 }

@@ -8,15 +8,14 @@ interface CountdownTimerProps {
 }
 
 export function CountdownTimer({ openAt, size = "md" }: CountdownTimerProps) {
-  const [display, setDisplay] = useState(countdown(openAt));
+  const [, forceTick] = useState(0);
 
   useEffect(() => {
-    setDisplay(countdown(openAt));
-    const interval = setInterval(() => {
-      setDisplay(countdown(openAt));
-    }, 60000);
+    const interval = setInterval(() => forceTick((t) => t + 1), 60000);
     return () => clearInterval(interval);
-  }, [openAt]);
+  }, []);
+
+  const display = countdown(openAt);
 
   const sizeClasses = {
     sm: "text-xs",

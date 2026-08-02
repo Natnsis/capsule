@@ -1,15 +1,7 @@
 import { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from "react-native";
 import { useRouter } from "expo-router";
-import {
-  Plus,
-  Clock,
-  Inbox,
-  Archive,
-  Sparkles,
-  Lock,
-  Timer,
-} from "lucide-react-native";
+import { Plus, Inbox, Lock } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { Capsule, CapsuleStatus } from "@/types/capsule";
@@ -59,13 +51,13 @@ export default function HomeScreen() {
 
   return (
     <ScrollView
-      className="flex-1 bg-[#F2EFEA] dark:bg-[#41393C]"
+      className="flex-1 bg-[#EEF0F3] dark:bg-[#181B21]"
       contentContainerStyle={{ paddingBottom: 120 }}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
-          tintColor="#82B090"
+          tintColor="#3B608F"
         />
       }
     >
@@ -73,10 +65,10 @@ export default function HomeScreen() {
         {/* Header */}
         <View className="flex-row items-center justify-between mb-2">
           <View>
-            <Text className="font-heading text-3xl font-bold text-[#41393C] dark:text-[#F2EFEA]">
+            <Text className="font-heading text-3xl font-bold text-[#181B21] dark:text-[#EEF0F3]">
               TimeCapsule
             </Text>
-            <Text className="font-sans text-sm text-[#7A6E71] mt-0.5">
+            <Text className="font-sans text-sm text-[#5A6072] mt-0.5">
               {sealedCount > 0
                 ? `${sealedCount} sealed · ${readyCount} ready`
                 : "Write to your future self"}
@@ -86,7 +78,7 @@ export default function HomeScreen() {
             onPress={() => router.push("/(tabs)/settings")}
             className="w-11 h-11 rounded-full bg-sage items-center justify-center"
           >
-            <Text className="font-heading text-lg font-bold text-[#F2EFEA]">
+            <Text className="font-heading text-lg font-bold text-[#EEF0F3]">
               {(name || "G").charAt(0).toUpperCase()}
             </Text>
           </TouchableOpacity>
@@ -98,23 +90,23 @@ export default function HomeScreen() {
             onPress={() => setActiveFilter("ready")}
             className="flex-1 bg-sage rounded-2xl p-4"
           >
-            <Inbox size={22} color="#F2EFEA" />
-            <Text className="font-heading text-2xl font-bold text-[#F2EFEA] mt-2">
+            <Inbox size={22} color="#EEF0F3" />
+            <Text className="font-heading text-2xl font-bold text-[#EEF0F3] mt-2">
               {readyCount}
             </Text>
-            <Text className="font-sans text-xs text-[#F2EFEA]/70">
+            <Text className="font-sans text-xs text-[#EEF0F3]/70">
               Ready to open
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setActiveFilter("sealed")}
-            className="flex-1 bg-[#E4E0DA] dark:bg-[#5E4F53] rounded-2xl p-4"
+            className="flex-1 bg-[#E8EAEE] dark:bg-[#353C48] rounded-2xl p-4"
           >
-            <Lock size={22} color="#7A6E71" />
-            <Text className="font-heading text-2xl font-bold text-[#41393C] dark:text-[#F2EFEA] mt-2">
+            <Lock size={22} color="#5A6072" />
+            <Text className="font-heading text-2xl font-bold text-[#181B21] dark:text-[#EEF0F3] mt-2">
               {sealedCount}
             </Text>
-            <Text className="font-sans text-xs text-[#7A6E71]">Sealed</Text>
+            <Text className="font-sans text-xs text-[#5A6072]">Sealed</Text>
           </TouchableOpacity>
         </View>
 
@@ -165,7 +157,7 @@ export default function HomeScreen() {
         onPress={() => router.push("/create")}
         className="absolute bottom-6 right-6 bg-sage rounded-full w-14 h-14 items-center justify-center shadow-lg shadow-sage/30"
       >
-        <Plus size={28} color="#F2EFEA" />
+        <Plus size={28} color="#EEF0F3" />
       </TouchableOpacity>
     </ScrollView>
   );

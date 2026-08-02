@@ -10,7 +10,8 @@ export interface Capsule {
   openedAt: number | null;
   tags: string[];
   imageUris: string[];
-  notificationId: string | null;
+  notificationIds: string[];
+  requireBiometric: boolean;
 }
 
 export interface CreateCapsuleInput {
@@ -19,6 +20,7 @@ export interface CreateCapsuleInput {
   openAt: number;
   tags?: string[];
   imageUris?: string[];
+  requireBiometric?: boolean;
 }
 
 export interface CapsuleStats {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Platform,
   Image,
   Animated,
+  Switch,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -21,6 +22,7 @@ import {
   MessageSquare,
   Clock,
   Sparkles,
+  Fingerprint,
 } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 
@@ -29,6 +31,7 @@ import { formatDate } from "@/lib/date";
 import { generateId } from "@/lib/id";
 import { Toast } from "@/components/shared/toast";
 import { CalendarPicker } from "@/components/shared/calendar-picker";
+import { BiometricService } from "@/services/biometric-service";
 
 export default function CreateCapsuleScreen() {
   const router = useRouter();
@@ -42,11 +45,17 @@ export default function CreateCapsuleScreen() {
   const [imageUris, setImageUris] = useState<string[]>([]);
   const [toast, setToast] = useState<{ message: string; variant: "success" | "error" | "info" } | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [requireBiometric, setRequireBiometric] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
 
   // Fade-in on mount to avoid white flash
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [fadeAnim] = useState(() => new Animated.Value(0));
   useEffect(() => {
     Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+  }, [fadeAnim]);
+
+  useEffect(() => {
+    BiometricService.isAvailable().then(setBiometricAvailable);
   }, []);
 
   const handlePickImages = async () => {
@@ -91,13 +100,14 @@ export default function CreateCapsuleScreen() {
         openAt: selectedDate.toString(),
         imageUris: JSON.stringify(imageUris),
         tags: JSON.stringify([]),
+        requireBiometric: requireBiometric ? "1" : "0",
       },
     });
   };
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-[#F2EFEA] dark:bg-[#41393C]"
+      className="flex-1 bg-[#EEF0F3] dark:bg-[#181B21]"
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <Toast
@@ -112,11 +122,11 @@ export default function CreateCapsuleScreen() {
           <View className="flex-row items-center justify-between px-4 py-3">
             <TouchableOpacity
               onPress={() => router.back()}
-              className="w-9 h-9 rounded-full bg-[#E4E0DA] dark:bg-[#5E4F53] items-center justify-center"
+              className="w-9 h-9 rounded-full bg-[#E8EAEE] dark:bg-[#353C48] items-center justify-center"
             >
-              <X size={18} color={isDark ? "#F2EFEA" : "#41393C"} />
+              <X size={18} color={isDark ? "#EEF0F3" : "#181B21"} />
             </TouchableOpacity>
-            <Text className="font-heading text-lg font-semibold text-[#41393C] dark:text-[#F2EFEA]">
+            <Text className="font-heading text-lg font-semibold text-[#181B21] dark:text-[#EEF0F3]">
               New Capsule
             </Text>
             <View style={{ width: 36 }} />
@@ -127,16 +137,16 @@ export default function CreateCapsuleScreen() {
           {/* Title */}
           <View className="mb-6 mt-2">
             <View className="flex-row items-center gap-2 mb-2">
-              <Type size={16} color="#82B090" />
-              <Text className="font-heading text-sm font-semibold text-[#7A6E71] uppercase tracking-wider">
+              <Type size={16} color="#3B608F" />
+              <Text className="font-heading text-sm font-semibold text-[#5A6072] uppercase tracking-wider">
                 Title
               </Text>
             </View>
-            <View className="bg-[#E4E0DA] dark:bg-[#5E4F53] rounded-2xl px-5 py-1">
+            <View className="bg-[#E8EAEE] dark:bg-[#353C48] rounded-2xl px-5 py-1">
               <TextInput
-                className="font-sans text-lg text-[#41393C] dark:text-[#F2EFEA] py-3"
+                className="font-sans text-lg text-[#181B21] dark:text-[#EEF0F3] py-3"
                 placeholder="Name your capsule"
-                placeholderTextColor="#7A6E71"
+                placeholderTextColor="#5A6072"
                 value={title}
                 onChangeText={setTitle}
               />
@@ -146,16 +156,16 @@ export default function CreateCapsuleScreen() {
           {/* Message */}
           <View className="mb-6">
             <View className="flex-row items-center gap-2 mb-2">
-              <MessageSquare size={16} color="#82B090" />
-              <Text className="font-heading text-sm font-semibold text-[#7A6E71] uppercase tracking-wider">
+              <MessageSquare size={16} color="#3B608F" />
+              <Text className="font-heading text-sm font-semibold text-[#5A6072] uppercase tracking-wider">
                 Message
               </Text>
             </View>
-            <View className="bg-[#E4E0DA] dark:bg-[#5E4F53] rounded-2xl px-5 py-2">
+            <View className="bg-[#E8EAEE] dark:bg-[#353C48] rounded-2xl px-5 py-2">
               <TextInput
-                className="font-sans text-base text-[#41393C] dark:text-[#F2EFEA] py-2 leading-6"
+                className="font-sans text-base text-[#181B21] dark:text-[#EEF0F3] py-2 leading-6"
                 placeholder="Write a letter to your future self"
-                placeholderTextColor="#7A6E71"
+                placeholderTextColor="#5A6072"
                 value={content}
                 onChangeText={setContent}
                 multiline
@@ -168,8 +178,8 @@ export default function CreateCapsuleScreen() {
           {/* Open date */}
           <View className="mb-6">
             <View className="flex-row items-center gap-2 mb-3">
-              <Clock size={16} color="#82B090" />
-              <Text className="font-heading text-sm font-semibold text-[#7A6E71] uppercase tracking-wider">
+              <Clock size={16} color="#3B608F" />
+              <Text className="font-heading text-sm font-semibold text-[#5A6072] uppercase tracking-wider">
                 Opens On
               </Text>
             </View>
@@ -181,12 +191,12 @@ export default function CreateCapsuleScreen() {
                     key={preset.label}
                     onPress={() => setSelectedDate(preset.value)}
                     className={`rounded-full px-5 py-2.5 ${
-                      selected ? "bg-sage" : "bg-[#E4E0DA] dark:bg-[#5E4F53]"
+                      selected ? "bg-sage" : "bg-[#E8EAEE] dark:bg-[#353C48]"
                     }`}
                   >
                     <Text
                       className={`font-sans text-sm font-semibold ${
-                        selected ? "text-[#F2EFEA]" : "text-[#41393C] dark:text-[#F2EFEA]"
+                        selected ? "text-[#EEF0F3]" : "text-[#181B21] dark:text-[#EEF0F3]"
                       }`}
                     >
                       {preset.label}
@@ -197,12 +207,12 @@ export default function CreateCapsuleScreen() {
               <TouchableOpacity
                 onPress={() => setShowCalendar(true)}
                 className={`rounded-full px-5 py-2.5 ${
-                  showCalendar ? "bg-sage" : "bg-[#E4E0DA] dark:bg-[#5E4F53]"
+                  showCalendar ? "bg-sage" : "bg-[#E8EAEE] dark:bg-[#353C48]"
                 }`}
               >
                 <Text
                   className={`font-sans text-sm font-semibold ${
-                    showCalendar ? "text-[#F2EFEA]" : "text-[#41393C] dark:text-[#F2EFEA]"
+                    showCalendar ? "text-[#EEF0F3]" : "text-[#181B21] dark:text-[#EEF0F3]"
                   }`}
                 >
                   Custom
@@ -211,7 +221,7 @@ export default function CreateCapsuleScreen() {
             </View>
             {selectedDate && (
               <View className="bg-sage/10 rounded-2xl px-5 py-3.5 flex-row items-center">
-                <Calendar size={18} color="#82B090" />
+                <Calendar size={18} color="#3B608F" />
                 <Text className="font-sans text-base text-sage ml-3 font-semibold">
                   Opens {formatDate(selectedDate)}
                 </Text>
@@ -222,8 +232,8 @@ export default function CreateCapsuleScreen() {
           {/* Photos */}
           <View className="mb-6">
             <View className="flex-row items-center gap-2 mb-3">
-              <ImageIcon size={16} color="#82B090" />
-              <Text className="font-heading text-sm font-semibold text-[#7A6E71] uppercase tracking-wider">
+              <ImageIcon size={16} color="#3B608F" />
+              <Text className="font-heading text-sm font-semibold text-[#5A6072] uppercase tracking-wider">
                 Photos
               </Text>
             </View>
@@ -253,12 +263,12 @@ export default function CreateCapsuleScreen() {
 
             <TouchableOpacity
               onPress={handlePickImages}
-              className="bg-[#E4E0DA] dark:bg-[#5E4F53] rounded-2xl px-4 py-8 items-center justify-center"
+              className="bg-[#E8EAEE] dark:bg-[#353C48] rounded-2xl px-4 py-8 items-center justify-center"
             >
               <View className="bg-sage/20 rounded-full p-3 mb-2">
-                <ImageIcon size={24} color="#82B090" />
+                <ImageIcon size={24} color="#3B608F" />
               </View>
-              <Text className="font-sans text-sm text-[#7A6E71]">
+              <Text className="font-sans text-sm text-[#5A6072]">
                 {imageUris.length > 0
                   ? `${imageUris.length} photo${imageUris.length > 1 ? "s" : ""} selected`
                   : "Tap to add photos"}
@@ -266,14 +276,42 @@ export default function CreateCapsuleScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* Biometric lock */}
+          {biometricAvailable && (
+            <View className="mb-6">
+              <View className="flex-row items-center gap-2 mb-3">
+                <Fingerprint size={16} color="#3B608F" />
+                <Text className="font-heading text-sm font-semibold text-[#5A6072] uppercase tracking-wider">
+                  Security
+                </Text>
+              </View>
+              <View className="bg-[#E8EAEE] dark:bg-[#353C48] rounded-2xl px-5 py-4 flex-row items-center justify-between">
+                <View className="flex-1 mr-3">
+                  <Text className="font-sans text-base text-[#181B21] dark:text-[#EEF0F3] font-medium">
+                    Require biometrics to open
+                  </Text>
+                  <Text className="font-sans text-xs text-[#5A6072] mt-0.5">
+                    Face ID or fingerprint will be required to open this capsule
+                  </Text>
+                </View>
+                <Switch
+                  value={requireBiometric}
+                  onValueChange={setRequireBiometric}
+                  trackColor={{ false: "#C9CFD8", true: "#3B608F" }}
+                  thumbColor="#EEF0F3"
+                />
+              </View>
+            </View>
+          )}
+
           {/* Submit */}
           <View className="py-6">
             <TouchableOpacity
               onPress={handleSeal}
               className="bg-sage rounded-full py-4 flex-row items-center justify-center gap-2 shadow-lg shadow-sage/30"
             >
-              <Sparkles size={20} color="#F2EFEA" />
-              <Text className="font-heading text-lg font-semibold text-[#F2EFEA]">
+              <Sparkles size={20} color="#EEF0F3" />
+              <Text className="font-heading text-lg font-semibold text-[#EEF0F3]">
                 Preview Capsule
               </Text>
             </TouchableOpacity>

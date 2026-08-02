@@ -32,7 +32,7 @@ export default function ArchiveScreen() {
 
   return (
     <ScrollView
-      className="flex-1 bg-[#F2EFEA] dark:bg-[#41393C]"
+      className="flex-1 bg-[#EEF0F3] dark:bg-[#181B21]"
       contentContainerStyle={{ paddingBottom: 120 }}
     >
       <View style={{ paddingTop: insets.top + 12 }} className="px-4 pb-2">

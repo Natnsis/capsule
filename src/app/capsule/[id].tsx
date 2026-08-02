@@ -1,9 +1,9 @@
 import { View, Text, ScrollView, TouchableOpacity, Image } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ArrowLeft, Trash2 } from "lucide-react-native";
+import { useColorScheme } from "nativewind";
+import { ArrowLeft, Trash2, Fingerprint } from "lucide-react-native";
 
-import type { Capsule } from "@/types/capsule";
 import { useCapsule, useDeleteCapsule } from "@/hooks/use-capsules";
 import { StatusBadge } from "@/components/capsules/status-badge";
 import { CountdownTimer } from "@/components/capsules/countdown-timer";
@@ -14,6 +14,8 @@ export default function CapsuleDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === "dark";
 
   const { data: capsule, isLoading } = useCapsule(id!);
   const deleteCapsule = useDeleteCapsule();
@@ -48,13 +50,13 @@ export default function CapsuleDetailScreen() {
       <View style={{ paddingTop: insets.top + 8 }} className="px-4">
         <View className="flex-row items-center justify-between mb-6">
           <TouchableOpacity onPress={() => router.back()}>
-            <ArrowLeft size={24} className="text-brown dark:text-cream" />
+            <ArrowLeft size={24} color={isDark ? "#EEF0F3" : "#181B21"} />
           </TouchableOpacity>
           <StatusBadge status={capsule.status} />
         </View>
 
         {isLocked && (
-          <View className="bg-muted rounded-3xl p-8 items-center mb-6">
+          <View className="bg-muted dark:bg-[#353C48] rounded-3xl p-8 items-center mb-6">
             <View className="bg-sage/20 rounded-full p-6 mb-4">
               <View className="w-16 h-16 rounded-full bg-sage items-center justify-center">
                 <Text className="font-heading text-3xl text-cream font-bold">
@@ -81,6 +83,14 @@ export default function CapsuleDetailScreen() {
               <Text className="font-sans text-base text-muted-foreground text-center mb-4">
                 Written on {formatDate(capsule.createdAt)}
               </Text>
+              {capsule.requireBiometric && (
+                <View className="flex-row items-center gap-2 bg-sage/10 rounded-full px-3 py-1.5">
+                  <Fingerprint size={14} color="#3B608F" />
+                  <Text className="font-sans text-xs text-sage font-semibold">
+                    Protected with biometrics
+                  </Text>
+                </View>
+              )}
             </View>
             <Button
               label="Open Capsule"

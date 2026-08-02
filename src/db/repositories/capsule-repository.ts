@@ -1,7 +1,6 @@
-import * as SQLite from "expo-sqlite";
 import { getDatabase } from "@/db/database";
+import { ImageService } from "@/services/image-service";
 import type { Capsule, CreateCapsuleInput, CapsuleStatus } from "@/types/capsule";
-import { isOpenable } from "@/lib/date";
 
 function rowToCapsule(row: any): Capsule {
   return {
@@ -14,7 +13,8 @@ function rowToCapsule(row: any): Capsule {
     openedAt: row.opened_at,
     tags: JSON.parse(row.tags || "[]"),
     imageUris: JSON.parse(row.image_uris || "[]"),
-    notificationId: row.notification_id,
+    notificationIds: JSON.parse(row.notification_ids || "[]"),
+    requireBiometric: !!row.require_biometric,
   };
 }
 
@@ -49,10 +49,14 @@ export const CapsuleRepository = {
     const db = await getDatabase();
     const id = generateId();
     const now = Date.now();
+    const persistedImageUris = await ImageService.persistImages(
+      id,
+      input.imageUris || []
+    );
 
     await db.runAsync(
-      `INSERT INTO capsules (id, title, content, created_at, open_at, status, tags, image_uris)
-       VALUES (?, ?, ?, ?, ?, 'sealed', ?, ?)`,
+      `INSERT INTO capsules (id, title, content, created_at, open_at, status, tags, image_uris, notification_ids, require_biometric)
+       VALUES (?, ?, ?, ?, ?, 'sealed', ?, ?, '[]', ?)`,
       [
         id,
         input.title,
@@ -60,7 +64,8 @@ export const CapsuleRepository = {
         now,
         input.openAt,
         JSON.stringify(input.tags || []),
-        JSON.stringify(input.imageUris || []),
+        JSON.stringify(persistedImageUris),
+        input.requireBiometric ? 1 : 0,
       ]
     );
 
@@ -73,8 +78,9 @@ export const CapsuleRepository = {
       status: "sealed",
       openedAt: null,
       tags: input.tags || [],
-      imageUris: input.imageUris || [],
-      notificationId: null,
+      imageUris: persistedImageUris,
+      notificationIds: [],
+      requireBiometric: !!input.requireBiometric,
     };
   },
 
@@ -87,17 +93,25 @@ export const CapsuleRepository = {
     );
   },
 
-  async setNotificationId(id: string, notificationId: string): Promise<void> {
+  async setNotificationIds(id: string, notificationIds: string[]): Promise<void> {
     const db = await getDatabase();
     await db.runAsync(
-      "UPDATE capsules SET notification_id = ? WHERE id = ?",
-      [notificationId, id]
+      "UPDATE capsules SET notification_ids = ? WHERE id = ?",
+      [JSON.stringify(notificationIds), id]
     );
+  },
+
+  async addNotificationIds(id: string, newIds: string[]): Promise<void> {
+    if (newIds.length === 0) return;
+    const capsule = await this.getById(id);
+    if (!capsule) return;
+    await this.setNotificationIds(id, [...capsule.notificationIds, ...newIds]);
   },
 
   async delete(id: string): Promise<void> {
     const db = await getDatabase();
     await db.runAsync("DELETE FROM capsules WHERE id = ?", [id]);
+    await ImageService.deleteImages(id);
   },
 
   async search(query: string): Promise<Capsule[]> {

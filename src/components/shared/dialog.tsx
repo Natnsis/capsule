@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { View, Text, Modal, TouchableOpacity, Animated, Pressable } from "react-native";
 
 interface DialogAction {
@@ -18,18 +18,18 @@ interface DialogProps {
 const buttonStyles: Record<string, string> = {
   default: "bg-sage",
   destructive: "bg-red-500",
-  cancel: "bg-[#E4E0DA] dark:bg-[#5E4F53]",
+  cancel: "bg-[#E8EAEE] dark:bg-[#353C48]",
 };
 
 const textStyles: Record<string, string> = {
-  default: "text-[#F2EFEA]",
+  default: "text-[#EEF0F3]",
   destructive: "text-white",
-  cancel: "text-[#41393C] dark:text-[#F2EFEA]",
+  cancel: "text-[#181B21] dark:text-[#EEF0F3]",
 };
 
 export function Dialog({ visible, title, message, actions, onClose }: DialogProps) {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const [fadeAnim] = useState(() => new Animated.Value(0));
+  const [scaleAnim] = useState(() => new Animated.Value(0.9));
 
   useEffect(() => {
     if (visible) {
@@ -47,17 +47,17 @@ export function Dialog({ visible, title, message, actions, onClose }: DialogProp
     <Modal transparent visible={visible} animationType="none" onRequestClose={onClose}>
       <Pressable className="flex-1 bg-black/50 justify-center items-center px-6" onPress={onClose}>
         <Animated.View
-          className="bg-[#F2EFEA] dark:bg-[#4E4449] rounded-3xl w-full max-w-sm overflow-hidden"
+          className="bg-[#EEF0F3] dark:bg-[#1C2027] rounded-3xl w-full max-w-sm overflow-hidden"
           style={{ opacity: fadeAnim, transform: [{ scale: scaleAnim }] }}
         >
           <Pressable onPress={(e) => e.stopPropagation()} className="px-6 pt-6 pb-4">
             {title ? (
-              <Text className="font-heading text-xl font-bold text-[#41393C] dark:text-[#F2EFEA] mb-2">
+              <Text className="font-heading text-xl font-bold text-[#181B21] dark:text-[#EEF0F3] mb-2">
                 {title}
               </Text>
             ) : null}
             {message ? (
-              <Text className="font-sans text-base text-[#7A6E71] leading-6">
+              <Text className="font-sans text-base text-[#5A6072] leading-6">
                 {message}
               </Text>
             ) : null}

@@ -36,8 +36,8 @@ export function EmptyState({ type, title, subtitle }: EmptyStateProps) {
 
   return (
     <View className="items-center justify-center py-16 px-8">
-      <View className="bg-muted rounded-full p-6 mb-6">
-        <Icon size={40} color="#7A6E71" />
+      <View className="bg-muted dark:bg-[#353C48] rounded-full p-6 mb-6">
+        <Icon size={40} color="#5A6072" />
       </View>
       <Text className="font-heading text-xl font-semibold text-brown dark:text-cream text-center mb-2">
         {copy.title}

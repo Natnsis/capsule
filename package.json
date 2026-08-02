@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "dependencies": {
     "@expo-google-fonts/manrope": "^0.4.2",
+    "@expo-google-fonts/outfit": "^0.4.3",
     "@expo/ui": "~56.0.18",
     "@fontsource/manrope": "^5.2.8",
     "@formatjs/intl-localematcher": "^0.8.10",
@@ -50,6 +51,8 @@
   "devDependencies": {
     "@types/react": "~19.2.2",
     "@types/uuid": "^11.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~56.0.4",
     "typescript": "~6.0.3"
   },
   "scripts": {

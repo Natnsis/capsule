@@ -10,7 +10,8 @@
     "ios": {
       "icon": "./assets/images/logo.png",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "Allow TimeCapsule to access your photos to attach memories to capsules."
+        "NSPhotoLibraryUsageDescription": "Allow TimeCapsule to access your photos to attach memories to capsules.",
+        "NSFaceIDUsageDescription": "Face ID is used to unlock the app and protected capsules."
       }
     },
     "android": {

@@ -40,24 +40,24 @@ export function CalendarPicker({ visible, currentValue, onSelect, onClose }: Cal
       <Pressable className="flex-1 bg-black/50 justify-center items-center px-6" onPress={onClose}>
         <Pressable
           onPress={(e) => e.stopPropagation()}
-          className="bg-[#F2EFEA] dark:bg-[#4E4449] rounded-3xl w-full max-w-sm overflow-hidden"
+          className="bg-[#EEF0F3] dark:bg-[#1C2027] rounded-3xl w-full max-w-sm overflow-hidden"
         >
           {/* Header */}
           <View className="flex-row items-center justify-between px-6 pt-6 pb-2">
             <TouchableOpacity
               onPress={() => setViewDate((d) => subMonths(d, 1))}
-              className="w-9 h-9 rounded-full bg-[#E4E0DA] dark:bg-[#5E4F53] items-center justify-center"
+              className="w-9 h-9 rounded-full bg-[#E8EAEE] dark:bg-[#353C48] items-center justify-center"
             >
-              <ChevronLeft size={18} color="#41393C" />
+              <ChevronLeft size={18} color="#181B21" />
             </TouchableOpacity>
-            <Text className="font-heading text-lg font-semibold text-[#41393C] dark:text-[#F2EFEA]">
+            <Text className="font-heading text-lg font-semibold text-[#181B21] dark:text-[#EEF0F3]">
               {format(viewDate, "MMMM yyyy")}
             </Text>
             <TouchableOpacity
               onPress={() => setViewDate((d) => addMonths(d, 1))}
-              className="w-9 h-9 rounded-full bg-[#E4E0DA] dark:bg-[#5E4F53] items-center justify-center"
+              className="w-9 h-9 rounded-full bg-[#E8EAEE] dark:bg-[#353C48] items-center justify-center"
             >
-              <ChevronRight size={18} color="#41393C" />
+              <ChevronRight size={18} color="#181B21" />
             </TouchableOpacity>
           </View>
 
@@ -65,7 +65,7 @@ export function CalendarPicker({ visible, currentValue, onSelect, onClose }: Cal
           <View className="flex-row px-6 pt-2 pb-1">
             {WEEKDAYS.map((day) => (
               <View key={day} className="items-center" style={{ width: "14.28%" }}>
-                <Text className="font-sans text-xs font-semibold text-[#7A6E71]">{day}</Text>
+                <Text className="font-sans text-xs font-semibold text-[#5A6072]">{day}</Text>
               </View>
             ))}
           </View>
@@ -95,12 +95,12 @@ export function CalendarPicker({ visible, currentValue, onSelect, onClose }: Cal
                   <Text
                     className={`font-sans text-sm ${
                       selected
-                        ? "text-[#F2EFEA] font-semibold"
+                        ? "text-[#EEF0F3] font-semibold"
                         : isTodayDay
                           ? "text-sage font-semibold"
                           : past
-                            ? "text-[#D5D0CA] dark:text-[#5E4F53]"
-                            : "text-[#41393C] dark:text-[#F2EFEA]"
+                            ? "text-[#C9CFD8] dark:text-[#353C48]"
+                            : "text-[#181B21] dark:text-[#EEF0F3]"
                     }`}
                   >
                     {format(day, "d")}

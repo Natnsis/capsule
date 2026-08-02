@@ -25,8 +25,8 @@ const statusConfig = {
   opened: {
     icon: Archive,
     label: "Opened",
-    gradient: "from-[#E4E0DA] to-[#E4E0DA]/80 dark:from-[#5E4F53] dark:to-[#5E4F53]/80",
-    borderColor: "border-[#D5D0CA]/50",
+    gradient: "from-[#E8EAEE] to-[#E8EAEE]/80 dark:from-[#353C48] dark:to-[#353C48]/80",
+    borderColor: "border-[#C9CFD8]/50",
   },
 };
 
@@ -38,11 +38,11 @@ export function CapsuleCard({ capsule, onPress }: CapsuleCardProps) {
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.7}
-      className="bg-[#F2EFEA] dark:bg-[#4E4449] rounded-2xl overflow-hidden border border-[#D5D0CA]/50 shadow-sm"
+      className="bg-[#EEF0F3] dark:bg-[#1C2027] rounded-2xl overflow-hidden border border-[#C9CFD8]/50 shadow-sm"
     >
       {/* Color accent bar */}
       <View
-        className={`h-1.5 ${capsule.status === "ready" ? "bg-sage" : capsule.status === "sealed" ? "bg-sage/30" : "bg-[#D5D0CA] dark:bg-[#5E4F53]"}`}
+        className={`h-1.5 ${capsule.status === "ready" ? "bg-sage" : capsule.status === "sealed" ? "bg-sage/30" : "bg-[#C9CFD8] dark:bg-[#353C48]"}`}
       />
 
       <View className="p-4">
@@ -50,12 +50,12 @@ export function CapsuleCard({ capsule, onPress }: CapsuleCardProps) {
         <View className="flex-row items-start justify-between mb-3">
           <View className="flex-1 mr-3">
             <Text
-              className="font-heading text-lg font-bold text-[#41393C] dark:text-[#F2EFEA]"
+              className="font-heading text-lg font-bold text-[#181B21] dark:text-[#EEF0F3]"
               numberOfLines={1}
             >
               {capsule.title}
             </Text>
-            <Text className="font-sans text-xs text-[#7A6E71] mt-0.5">
+            <Text className="font-sans text-xs text-[#5A6072] mt-0.5">
               Created {formatDate(capsule.createdAt)}
             </Text>
           </View>
@@ -67,26 +67,26 @@ export function CapsuleCard({ capsule, onPress }: CapsuleCardProps) {
                 ? "bg-sage"
                 : capsule.status === "sealed"
                   ? "bg-sage/10"
-                  : "bg-[#E4E0DA] dark:bg-[#5E4F53]"
+                  : "bg-[#E8EAEE] dark:bg-[#353C48]"
             }`}
           >
             <Icon
               size={12}
               color={
                 capsule.status === "ready"
-                  ? "#F2EFEA"
+                  ? "#EEF0F3"
                   : capsule.status === "sealed"
-                    ? "#82B090"
-                    : "#7A6E71"
+                    ? "#3B608F"
+                    : "#5A6072"
               }
             />
             <Text
               className={`font-sans text-xs font-semibold ${
                 capsule.status === "ready"
-                  ? "text-[#F2EFEA]"
+                  ? "text-[#EEF0F3]"
                   : capsule.status === "sealed"
                     ? "text-sage"
-                    : "text-[#7A6E71]"
+                    : "text-[#5A6072]"
               }`}
             >
               {config.label}
@@ -96,9 +96,9 @@ export function CapsuleCard({ capsule, onPress }: CapsuleCardProps) {
 
         {/* Content preview */}
         {capsule.content ? (
-          <View className="bg-[#E4E0DA]/50 dark:bg-[#5E4F53]/50 rounded-xl px-3 py-2.5 mb-3">
+          <View className="bg-[#E8EAEE]/50 dark:bg-[#353C48]/50 rounded-xl px-3 py-2.5 mb-3">
             <Text
-              className="font-sans text-sm text-[#7A6E71] leading-5"
+              className="font-sans text-sm text-[#5A6072] leading-5"
               numberOfLines={2}
             >
               {capsule.content}
@@ -134,15 +134,15 @@ export function CapsuleCard({ capsule, onPress }: CapsuleCardProps) {
         )}
 
         {/* Footer */}
-        <View className="flex-row items-center justify-between pt-2.5 border-t border-[#D5D0CA]/50 dark:border-[#5E4F53]/50">
+        <View className="flex-row items-center justify-between pt-2.5 border-t border-[#C9CFD8]/50 dark:border-[#353C48]/50">
           <View className="flex-row items-center gap-1.5">
             {capsule.status === "sealed" && (
-              <Timer size={12} color="#7A6E71" />
+              <Timer size={12} color="#5A6072" />
             )}
             <CountdownTimer openAt={capsule.openAt} size="sm" />
           </View>
           {capsule.openedAt && (
-            <Text className="font-sans text-xs text-[#7A6E71]">
+            <Text className="font-sans text-xs text-[#5A6072]">
               Opened {formatDate(capsule.openedAt)}
             </Text>
           )}

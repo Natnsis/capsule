@@ -26,20 +26,23 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
   };
 
   useEffect(() => {
-    handleAuth();
+    const timer = setTimeout(() => {
+      handleAuth();
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   return (
-    <View className="flex-1 bg-[#41393C] items-center justify-center px-6">
+    <View className="flex-1 bg-[#181B21] items-center justify-center px-6">
       <Image
         source={require("@/../assets/images/logo.png")}
         className="w-16 h-16 mb-4"
         resizeMode="contain"
       />
-      <Text className="font-heading text-3xl font-bold text-[#F2EFEA] mb-2">
+      <Text className="font-heading text-3xl font-bold text-[#EEF0F3] mb-2">
         TimeCapsule
       </Text>
-      <Text className="font-sans text-base text-[#D5D0CA] mb-12 text-center">
+      <Text className="font-sans text-base text-[#C9CFD8] mb-12 text-center">
         Your memories are locked
       </Text>
 
@@ -48,7 +51,7 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
         disabled={attempting}
         className="bg-sage rounded-full w-20 h-20 items-center justify-center mb-4"
       >
-        <Fingerprint size={36} color="#F2EFEA" />
+        <Fingerprint size={36} color="#EEF0F3" />
       </TouchableOpacity>
 
       {error && (
@@ -57,7 +60,7 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
         </Text>
       )}
 
-      <Text className="font-sans text-sm text-[#7A6E71] mt-4 text-center">
+      <Text className="font-sans text-sm text-[#5A6072] mt-4 text-center">
         Tap the fingerprint to unlock
       </Text>
     </View>

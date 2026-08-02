@@ -83,7 +83,7 @@ export function UnlockAnimation({ createdAt, openedAt, onComplete }: UnlockAnima
 
       <Animated.View style={contentStyle} className="items-center px-8">
         <View className="bg-sage rounded-full p-6 mb-6">
-          <Sparkles size={40} color="#F2EFEA" />
+          <Sparkles size={40} color="#EEF0F3" />
         </View>
 
         <Text className="font-heading text-3xl font-bold text-brown dark:text-cream text-center mb-4">

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { View, Text, ScrollView, Image } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Fingerprint } from "lucide-react-native";
 
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/capsules/status-badge";
@@ -18,6 +19,7 @@ export default function PreviewScreen() {
 
   const [sealing, setSealing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [now] = useState(() => Date.now());
 
   const title = params.title as string;
   const content = params.content as string;
@@ -26,6 +28,7 @@ export default function PreviewScreen() {
   const imageUris = JSON.parse(
     (params.imageUris as string) || "[]"
   ) as string[];
+  const requireBiometric = params.requireBiometric === "1";
 
   const handleSeal = async () => {
     setSealing(true);
@@ -37,13 +40,14 @@ export default function PreviewScreen() {
         openAt,
         tags,
         imageUris,
+        requireBiometric,
       };
 
       await createCapsule.mutateAsync(input);
 
       setSealing(false);
       router.replace("/(tabs)");
-    } catch (err) {
+    } catch {
       setSealing(false);
       setError("Failed to seal capsule. Please try again.");
     }
@@ -70,7 +74,7 @@ export default function PreviewScreen() {
           Review your capsule before sealing it
         </Text>
 
-        <View className="bg-cream dark:bg-[#4E4449] rounded-2xl p-6 border border-border/50 mb-6">
+        <View className="bg-cream dark:bg-[#1C2027] rounded-2xl p-6 border border-border/50 mb-6">
           <View className="flex-row items-start justify-between mb-4">
             <Text className="font-heading text-2xl font-bold text-brown dark:text-cream flex-1 mr-2">
               {title}
@@ -104,13 +108,22 @@ export default function PreviewScreen() {
             </View>
           )}
 
+          {requireBiometric && (
+            <View className="flex-row items-center gap-2 bg-sage/10 rounded-full px-3 py-1.5 self-start mb-4">
+              <Fingerprint size={14} color="#3B608F" />
+              <Text className="font-sans text-xs text-sage font-semibold">
+                Protected with biometrics
+              </Text>
+            </View>
+          )}
+
           <View className="pt-4 border-t border-border/50 gap-2">
             <View className="flex-row items-center justify-between">
               <Text className="font-sans text-sm text-muted-foreground">
                 Created
               </Text>
               <Text className="font-sans text-sm text-brown dark:text-cream font-medium">
-                {formatDate(Date.now())}
+                {formatDate(now)}
               </Text>
             </View>
             <View className="flex-row items-center justify-between">

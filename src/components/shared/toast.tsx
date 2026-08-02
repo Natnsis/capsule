@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Text, Animated, Image } from "react-native";
 import { CheckCircle, XCircle } from "lucide-react-native";
 
@@ -15,7 +15,7 @@ interface ToastProps {
 const bgColors: Record<ToastVariant, string> = {
   success: "bg-sage",
   error: "bg-red-500",
-  info: "bg-[#4E4449]",
+  info: "bg-[#1C2027]",
 };
 
 export function Toast({
@@ -25,8 +25,8 @@ export function Toast({
   onHide,
   duration = 2500,
 }: ToastProps) {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(-20)).current;
+  const [opacity] = useState(() => new Animated.Value(0));
+  const [translateY] = useState(() => new Animated.Value(-20));
 
   useEffect(() => {
     if (visible) {
@@ -56,11 +56,11 @@ export function Toast({
       style={{ opacity, transform: [{ translateY }] }}
     >
       {Icon ? (
-        <Icon size={20} color="#F2EFEA" />
+        <Icon size={20} color="#EEF0F3" />
       ) : (
         <Image source={require("@/../assets/images/logo.png")} className="w-5 h-5" resizeMode="contain" />
       )}
-      <Text className="font-sans text-sm font-medium text-[#F2EFEA] ml-3 flex-1">
+      <Text className="font-sans text-sm font-medium text-[#EEF0F3] ml-3 flex-1">
         {message}
       </Text>
     </Animated.View>

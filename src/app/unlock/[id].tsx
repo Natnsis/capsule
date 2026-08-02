@@ -1,12 +1,13 @@
-import { useState } from "react";
-import { View, Text, ScrollView, Image } from "react-native";
+import { useState, useEffect } from "react";
+import { View, Text, ScrollView, TouchableOpacity, Image } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Fingerprint } from "lucide-react-native";
 
-import type { Capsule } from "@/types/capsule";
 import { useCapsule, useOpenCapsule } from "@/hooks/use-capsules";
 import { UnlockAnimation } from "@/components/animations/unlock-animation";
 import { Button } from "@/components/ui/button";
+import { BiometricService } from "@/services/biometric-service";
 import { formatDate } from "@/lib/date";
 
 export default function UnlockScreen() {
@@ -17,7 +18,32 @@ export default function UnlockScreen() {
   const openCapsule = useOpenCapsule();
 
   const [animating, setAnimating] = useState(true);
-  const [opened, setOpened] = useState(false);
+  const [bioPassed, setBioPassed] = useState(false);
+  const [bioChecking, setBioChecking] = useState(false);
+  const [bioFailed, setBioFailed] = useState(false);
+  const [openedAt] = useState(() => Date.now());
+
+  const requiresBiometric = !!capsule?.requireBiometric;
+
+  const runBiometricCheck = async () => {
+    setBioChecking(true);
+    setBioFailed(false);
+    const ok = await BiometricService.authenticate();
+    setBioChecking(false);
+    if (ok) {
+      setBioPassed(true);
+    } else {
+      setBioFailed(true);
+    }
+  };
+
+  useEffect(() => {
+    if (!requiresBiometric || bioPassed) return;
+    const timer = setTimeout(() => {
+      runBiometricCheck();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [requiresBiometric, bioPassed]);
 
   if (isLoading || !capsule) {
     return (
@@ -27,9 +53,41 @@ export default function UnlockScreen() {
     );
   }
 
+  if (requiresBiometric && !bioPassed) {
+    return (
+      <View className="flex-1 items-center justify-center bg-brown px-6">
+        <View className="bg-sage/20 rounded-full p-6 mb-6">
+          <Fingerprint size={40} color="#3B608F" />
+        </View>
+        <Text className="font-heading text-2xl font-bold text-cream text-center mb-2">
+          This capsule is protected
+        </Text>
+        <Text className="font-sans text-base text-[#C9CFD8] text-center mb-8">
+          Verify your identity to open &ldquo;{capsule.title}&rdquo;
+        </Text>
+        <TouchableOpacity
+          onPress={runBiometricCheck}
+          disabled={bioChecking}
+          className="bg-sage rounded-full w-20 h-20 items-center justify-center mb-4"
+        >
+          <Fingerprint size={36} color="#EEF0F3" />
+        </TouchableOpacity>
+        {bioFailed && (
+          <Text className="font-sans text-sm text-red-400 mb-4 text-center">
+            Authentication failed. Tap to try again.
+          </Text>
+        )}
+        <Button
+          label="Cancel"
+          variant="ghost"
+          onPress={() => router.back()}
+        />
+      </View>
+    );
+  }
+
   const handleAnimationComplete = async () => {
     setAnimating(false);
-    setOpened(true);
     await openCapsule.mutateAsync(capsule.id);
   };
 
@@ -37,7 +95,7 @@ export default function UnlockScreen() {
     return (
       <UnlockAnimation
         createdAt={capsule.createdAt}
-        openedAt={Date.now()}
+        openedAt={openedAt}
         onComplete={handleAnimationComplete}
       />
     );
@@ -56,7 +114,7 @@ export default function UnlockScreen() {
           {capsule.title}
         </Text>
 
-        <View className="bg-muted rounded-2xl px-4 py-3 flex-row gap-6 mb-8">
+        <View className="bg-muted dark:bg-[#353C48] rounded-2xl px-4 py-3 flex-row gap-6 mb-8">
           <View className="items-center">
             <Text className="font-sans text-xs text-muted-foreground mb-1">
               Written
@@ -71,12 +129,12 @@ export default function UnlockScreen() {
               Opened
             </Text>
             <Text className="font-sans text-sm text-sage font-medium">
-              {formatDate(Date.now())}
+              {formatDate(openedAt)}
             </Text>
           </View>
         </View>
 
-        <View className="bg-cream dark:bg-[#4E4449] rounded-3xl p-6 w-full border border-border/50 mb-8">
+        <View className="bg-cream dark:bg-[#1C2027] rounded-3xl p-6 w-full border border-border/50 mb-8">
           <Text className="font-sans text-base text-brown dark:text-cream leading-7">
             {capsule.content}
           </Text>

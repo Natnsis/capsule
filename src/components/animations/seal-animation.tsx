@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { View, Text } from "react-native";
+import { View } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -62,7 +62,7 @@ export function SealAnimation({ onComplete }: SealAnimationProps) {
         style={animatedIconStyle}
         className="bg-sage rounded-full p-8 mb-6"
       >
-        <Lock size={48} color="#F2EFEA" />
+        <Lock size={48} color="#EEF0F3" />
       </Animated.View>
       <Animated.Text
         style={animatedTextStyle}

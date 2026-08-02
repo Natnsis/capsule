@@ -1,13 +1,11 @@
 import { useState } from "react";
-import { View, Text, Dimensions } from "react-native";
+import { View, Text } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pen, Clock, Heart } from "lucide-react-native";
 
 import { Button } from "@/components/ui/button";
 import { useOnboardingStore } from "@/stores/onboarding-store";
-
-const { width } = Dimensions.get("window");
 
 const slides = [
   {
@@ -72,7 +70,7 @@ export default function OnboardingScreen() {
 
       <View className="flex-1 items-center justify-center px-8">
         <View className="bg-sage/10 rounded-full p-10 mb-10">
-          <Icon size={64} color="#82B090" />
+          <Icon size={64} color="#3B608F" />
         </View>
 
         <Text className="font-heading text-4xl font-bold text-brown dark:text-cream text-center mb-4">

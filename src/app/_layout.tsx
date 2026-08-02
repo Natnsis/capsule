@@ -5,10 +5,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useColorScheme } from "nativewind";
 import {
   useFonts,
-  Manrope_400Regular,
-  Manrope_600SemiBold,
-  Manrope_700Bold,
-} from "@expo-google-fonts/manrope";
+  Outfit_400Regular,
+  Outfit_600SemiBold,
+  Outfit_700Bold,
+} from "@expo-google-fonts/outfit";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -20,6 +20,7 @@ import { useOnboardingStore } from "@/stores/onboarding-store";
 import { useNotificationStore } from "@/stores/notification-store";
 import { CapsuleRepository } from "@/db/repositories/capsule-repository";
 import { NotificationService } from "@/services/notification-service";
+import { reconcileCapsuleReminders } from "@/hooks/use-capsules";
 import { LockScreen } from "@/components/shared/lock-screen";
 
 import "../global.css";
@@ -38,9 +39,9 @@ export default function RootLayout() {
   const { colorScheme: nwScheme, setColorScheme } = useColorScheme();
 
   const [fontsLoaded] = useFonts({
-    Manrope_400Regular,
-    Manrope_600SemiBold,
-    Manrope_700Bold,
+    Outfit_400Regular,
+    Outfit_600SemiBold,
+    Outfit_700Bold,
   });
 
   const [locked, setLocked] = useState(false);
@@ -76,8 +77,28 @@ export default function RootLayout() {
       bootedRef.current = true;
       setBooted(true);
       if (biometricEnabled) setLocked(true);
+      reconcileCapsuleReminders();
     })();
   }, [fontsLoaded]);
+
+  // Navigate to the relevant capsule when a reminder notification is tapped —
+  // both while the app is running and on cold start from a killed state.
+  useEffect(() => {
+    if (!booted) return;
+
+    NotificationService.getInitialCapsuleId().then((capsuleId) => {
+      if (capsuleId) router.push(`/capsule/${capsuleId}`);
+    });
+
+    let subscription: { remove: () => void } | undefined;
+    NotificationService.addResponseListener((capsuleId) => {
+      router.push(`/capsule/${capsuleId}`);
+    }).then((sub) => {
+      subscription = sub;
+    });
+
+    return () => subscription?.remove();
+  }, [booted]);
 
   // Fire OS notification permission request once, after onboarding
   useEffect(() => {
@@ -99,8 +120,8 @@ export default function RootLayout() {
 
   if (!fontsLoaded || !booted) {
     return (
-      <View className="flex-1 items-center justify-center bg-[#F2EFEA]">
-        <ActivityIndicator size="large" color="#82B090" />
+      <View className="flex-1 items-center justify-center bg-[#EEF0F3]">
+        <ActivityIndicator size="large" color="#3B608F" />
       </View>
     );
   }
@@ -113,7 +134,7 @@ export default function RootLayout() {
     <GestureHandlerRootView className="flex-1">
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider>
-          <View className="flex-1 bg-[#F2EFEA] dark:bg-[#41393C]">
+          <View className="flex-1 bg-[#EEF0F3] dark:bg-[#181B21]">
             <StatusBar style={nwScheme === "dark" ? "light" : "dark"} />
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="onboarding" />

@@ -25,10 +25,29 @@ async function initializeDatabase(database: SQLite.SQLiteDatabase): Promise<void
       opened_at INTEGER,
       tags TEXT DEFAULT '[]',
       image_uris TEXT DEFAULT '[]',
-      notification_id TEXT
+      notification_id TEXT,
+      notification_ids TEXT DEFAULT '[]',
+      require_biometric INTEGER DEFAULT 0
     );
 
     CREATE INDEX IF NOT EXISTS idx_capsules_status ON capsules(status);
     CREATE INDEX IF NOT EXISTS idx_capsules_open_at ON capsules(open_at);
   `);
+
+  // Migrate databases created before notification_ids / require_biometric existed.
+  const columns = await database.getAllAsync<{ name: string }>(
+    "PRAGMA table_info(capsules)"
+  );
+  const columnNames = new Set(columns.map((c) => c.name));
+
+  if (!columnNames.has("notification_ids")) {
+    await database.execAsync(
+      "ALTER TABLE capsules ADD COLUMN notification_ids TEXT DEFAULT '[]'"
+    );
+  }
+  if (!columnNames.has("require_biometric")) {
+    await database.execAsync(
+      "ALTER TABLE capsules ADD COLUMN require_biometric INTEGER DEFAULT 0"
+    );
+  }
 }
