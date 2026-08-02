@@ -12,6 +12,7 @@ import Animated, {
 import { Sparkles } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { formatDate, timeElapsed } from "@/lib/date";
+import { colors } from "@/constants/colors";
 
 interface UnlockAnimationProps {
   createdAt: number;
@@ -75,7 +76,7 @@ export function UnlockAnimation({ createdAt, openedAt, onComplete }: UnlockAnima
   const elapsed = timeElapsed(createdAt, openedAt);
 
   return (
-    <View className="flex-1 items-center justify-center bg-background">
+    <View className="flex-1 items-center justify-center bg-cream dark:bg-brown">
       <Animated.View
         style={overlayStyle}
         className="absolute inset-0 bg-brown dark:bg-cream"
@@ -83,7 +84,7 @@ export function UnlockAnimation({ createdAt, openedAt, onComplete }: UnlockAnima
 
       <Animated.View style={contentStyle} className="items-center px-8">
         <View className="bg-sage rounded-full p-6 mb-6">
-          <Sparkles size={40} color="#EEF0F3" />
+          <Sparkles size={40} color={colors.cream} />
         </View>
 
         <Text className="font-heading text-3xl font-bold text-brown dark:text-cream text-center mb-4">

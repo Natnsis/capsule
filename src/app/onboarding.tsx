@@ -6,6 +6,7 @@ import { Pen, Clock, Heart } from "lucide-react-native";
 
 import { Button } from "@/components/ui/button";
 import { useOnboardingStore } from "@/stores/onboarding-store";
+import { colors } from "@/constants/colors";
 
 const slides = [
   {
@@ -37,6 +38,7 @@ export default function OnboardingScreen() {
   const slide = slides[currentSlide];
   const Icon = slide.icon;
   const isLast = currentSlide === slides.length - 1;
+  const accent = currentSlide % 2 === 0 ? "sage" : "secondary";
 
   const handleNext = () => {
     if (isLast) {
@@ -69,8 +71,14 @@ export default function OnboardingScreen() {
       </View>
 
       <View className="flex-1 items-center justify-center px-8">
-        <View className="bg-sage/10 rounded-full p-10 mb-10">
-          <Icon size={64} color="#3B608F" />
+        <View
+          className={`rounded-full p-10 mb-10 ${
+            accent === "sage"
+              ? "bg-sage/10 shadow-lg shadow-sage/20"
+              : "bg-secondary/10 shadow-lg shadow-secondary/20"
+          }`}
+        >
+          <Icon size={64} color={accent === "sage" ? colors.sage : colors.secondary} />
         </View>
 
         <Text className="font-heading text-4xl font-bold text-brown dark:text-cream text-center mb-4">

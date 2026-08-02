@@ -11,6 +11,7 @@ import { RichTextView } from "@/components/shared/rich-text-view";
 import { parseBlocks } from "@/lib/rich-text";
 import { BiometricService } from "@/services/biometric-service";
 import { formatDate } from "@/lib/date";
+import { colors } from "@/constants/colors";
 
 export default function UnlockScreen() {
   const router = useRouter();
@@ -59,12 +60,12 @@ export default function UnlockScreen() {
     return (
       <View className="flex-1 items-center justify-center bg-brown px-6">
         <View className="bg-sage/20 rounded-full p-6 mb-6">
-          <Fingerprint size={40} color="#3B608F" />
+          <Fingerprint size={40} color={colors.sage} />
         </View>
         <Text className="font-heading text-2xl font-bold text-cream text-center mb-2">
           This capsule is protected
         </Text>
-        <Text className="font-sans text-base text-[#C9CFD8] text-center mb-8">
+        <Text className="font-sans text-base text-border text-center mb-8">
           Verify your identity to open &ldquo;{capsule.title}&rdquo;
         </Text>
         <TouchableOpacity
@@ -72,10 +73,10 @@ export default function UnlockScreen() {
           disabled={bioChecking}
           className="bg-sage rounded-full w-20 h-20 items-center justify-center mb-4"
         >
-          <Fingerprint size={36} color="#EEF0F3" />
+          <Fingerprint size={36} color={colors.cream} />
         </TouchableOpacity>
         {bioFailed && (
-          <Text className="font-sans text-sm text-red-400 mb-4 text-center">
+          <Text className="font-sans text-sm text-destructive mb-4 text-center">
             Authentication failed. Tap to try again.
           </Text>
         )}
@@ -116,7 +117,7 @@ export default function UnlockScreen() {
           {capsule.title}
         </Text>
 
-        <View className="bg-muted dark:bg-[#353C48] rounded-2xl px-4 py-3 flex-row gap-6 mb-8">
+        <View className="bg-muted dark:bg-brown-light rounded-2xl px-4 py-3 flex-row gap-6 mb-8">
           <View className="items-center">
             <Text className="font-sans text-xs text-muted-foreground mb-1">
               Written
@@ -136,7 +137,7 @@ export default function UnlockScreen() {
           </View>
         </View>
 
-        <View className="bg-cream dark:bg-[#1C2027] rounded-3xl p-6 w-full border border-border/50 mb-8">
+        <View className="bg-card dark:bg-brown-card rounded-3xl p-6 w-full border border-border/50 dark:border-brown-light/50 mb-8">
           <RichTextView blocks={parseBlocks(capsule.content)} />
         </View>
 

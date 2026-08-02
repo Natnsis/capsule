@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView } from "react-nativ
 import { Heading, Pilcrow, Underline as UnderlineIcon, Plus } from "lucide-react-native";
 
 import { type BlockType, type ContentBlock, createEmptyBlock } from "@/lib/rich-text";
+import { colors } from "@/constants/colors";
 
 interface RichTextEditorProps {
   blocks: ContentBlock[];
@@ -72,7 +73,7 @@ export function RichTextEditor({ blocks, onChange, placeholder }: RichTextEditor
       </View>
 
       {/* Blocks */}
-      <View className="flex-1 bg-[#E8EAEE] dark:bg-[#353C48] rounded-2xl px-5 py-4">
+      <View className="flex-1 bg-muted dark:bg-brown-light rounded-2xl px-5 py-4">
         <ScrollView className="flex-1" keyboardShouldPersistTaps="handled">
           <View className="gap-1">
           {blocks.map((block, index) => (
@@ -88,15 +89,15 @@ export function RichTextEditor({ blocks, onChange, placeholder }: RichTextEditor
                 if (nativeEvent.key === "Backspace") handleBackspace(block.id, index);
               }}
               placeholder={index === 0 ? placeholder : undefined}
-              placeholderTextColor="#5A6072"
+              placeholderTextColor={colors.mutedForeground}
               multiline
               textAlignVertical="top"
               spellCheck
               autoCorrect
               className={
                 block.type === "heading"
-                  ? `font-heading text-xl font-bold text-[#181B21] dark:text-[#EEF0F3] py-1.5 ${block.underline ? "underline" : ""}`
-                  : `font-sans text-base leading-6 text-[#181B21] dark:text-[#EEF0F3] py-1.5 ${block.underline ? "underline" : ""}`
+                  ? `font-heading text-xl font-bold text-brown dark:text-cream py-1.5 ${block.underline ? "underline" : ""}`
+                  : `font-sans text-base leading-6 text-brown dark:text-cream py-1.5 ${block.underline ? "underline" : ""}`
               }
             />
           ))}
@@ -105,8 +106,8 @@ export function RichTextEditor({ blocks, onChange, placeholder }: RichTextEditor
             onPress={addBlock}
             className="flex-row items-center gap-1.5 py-2 opacity-60"
           >
-            <Plus size={14} color="#5A6072" />
-            <Text className="font-sans text-xs text-[#5A6072]">Add a line</Text>
+            <Plus size={14} color={colors.mutedForeground} />
+            <Text className="font-sans text-xs text-muted-foreground">Add a line</Text>
           </TouchableOpacity>
           </View>
         </ScrollView>
@@ -131,13 +132,13 @@ function ToolbarButton({
       onPress={onPress}
       accessibilityLabel={label}
       className={`flex-row items-center gap-1.5 rounded-full px-3.5 py-2 ${
-        active ? "bg-sage" : "bg-[#E8EAEE] dark:bg-[#353C48]"
+        active ? "bg-sage" : "bg-muted dark:bg-brown-light"
       }`}
     >
-      <Icon size={14} color={active ? "#EEF0F3" : "#5A6072"} />
+      <Icon size={14} color={active ? colors.cream : colors.mutedForeground} />
       <Text
         className={`font-sans text-xs font-semibold ${
-          active ? "text-[#EEF0F3]" : "text-[#5A6072]"
+          active ? "text-cream" : "text-muted-foreground"
         }`}
       >
         {label}

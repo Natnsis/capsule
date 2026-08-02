@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Text, Animated, Image } from "react-native";
 import { CheckCircle, XCircle } from "lucide-react-native";
+import { colors } from "@/constants/colors";
 
 type ToastVariant = "success" | "error" | "info";
 
@@ -14,8 +15,8 @@ interface ToastProps {
 
 const bgColors: Record<ToastVariant, string> = {
   success: "bg-sage",
-  error: "bg-red-500",
-  info: "bg-[#1C2027]",
+  error: "bg-destructive",
+  info: "bg-brown-card",
 };
 
 export function Toast({
@@ -56,11 +57,11 @@ export function Toast({
       style={{ opacity, transform: [{ translateY }] }}
     >
       {Icon ? (
-        <Icon size={20} color="#EEF0F3" />
+        <Icon size={20} color={colors.cream} />
       ) : (
         <Image source={require("@/../assets/images/logo.png")} className="w-5 h-5" resizeMode="contain" />
       )}
-      <Text className="font-sans text-sm font-medium text-[#EEF0F3] ml-3 flex-1">
+      <Text className="font-sans text-sm font-medium text-cream ml-3 flex-1">
         {message}
       </Text>
     </Animated.View>

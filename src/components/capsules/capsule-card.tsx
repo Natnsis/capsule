@@ -5,6 +5,7 @@ import { CountdownTimer } from "./countdown-timer";
 import { formatDate } from "@/lib/date";
 import { parseBlocks } from "@/lib/rich-text";
 import { RichTextView } from "@/components/shared/rich-text-view";
+import { colors } from "@/constants/colors";
 
 interface CapsuleCardProps {
   capsule: Capsule;
@@ -12,30 +13,10 @@ interface CapsuleCardProps {
 }
 
 const statusConfig = {
-  draft: {
-    icon: PenLine,
-    label: "Draft",
-    gradient: "from-[#E8EAEE] to-[#E8EAEE]/80 dark:from-[#353C48] dark:to-[#353C48]/80",
-    borderColor: "border-[#C9CFD8]/50",
-  },
-  sealed: {
-    icon: Lock,
-    label: "Sealed",
-    gradient: "from-sage/10 to-sage/5",
-    borderColor: "border-sage/20",
-  },
-  ready: {
-    icon: Unlock,
-    label: "Ready to Open",
-    gradient: "from-sage to-sage/90",
-    borderColor: "border-sage",
-  },
-  opened: {
-    icon: Archive,
-    label: "Opened",
-    gradient: "from-[#E8EAEE] to-[#E8EAEE]/80 dark:from-[#353C48] dark:to-[#353C48]/80",
-    borderColor: "border-[#C9CFD8]/50",
-  },
+  draft: { icon: PenLine, label: "Draft" },
+  sealed: { icon: Lock, label: "Sealed" },
+  ready: { icon: Unlock, label: "Ready to Open" },
+  opened: { icon: Archive, label: "Opened" },
 };
 
 export function CapsuleCard({ capsule, onPress }: CapsuleCardProps) {
@@ -46,11 +27,11 @@ export function CapsuleCard({ capsule, onPress }: CapsuleCardProps) {
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.7}
-      className="bg-[#EEF0F3] dark:bg-[#1C2027] rounded-2xl overflow-hidden border border-[#C9CFD8]/50 shadow-sm"
+      className="bg-card dark:bg-brown-card rounded-2xl overflow-hidden border border-border/50 dark:border-brown-light/50 shadow-sm"
     >
       {/* Color accent bar */}
       <View
-        className={`h-1.5 ${capsule.status === "ready" ? "bg-sage" : capsule.status === "sealed" ? "bg-sage/30" : "bg-[#C9CFD8] dark:bg-[#353C48]"}`}
+        className={`h-1.5 ${capsule.status === "ready" ? "bg-sage" : capsule.status === "sealed" ? "bg-sage/30" : "bg-border dark:bg-brown-light"}`}
       />
 
       <View className="p-4">
@@ -58,12 +39,12 @@ export function CapsuleCard({ capsule, onPress }: CapsuleCardProps) {
         <View className="flex-row items-start justify-between mb-3">
           <View className="flex-1 mr-3">
             <Text
-              className="font-heading text-lg font-bold text-[#181B21] dark:text-[#EEF0F3]"
+              className="font-heading text-lg font-bold text-brown dark:text-cream"
               numberOfLines={1}
             >
               {capsule.title}
             </Text>
-            <Text className="font-sans text-xs text-[#5A6072] mt-0.5">
+            <Text className="font-sans text-xs text-muted-foreground mt-0.5">
               Created {formatDate(capsule.createdAt)}
             </Text>
           </View>
@@ -75,26 +56,26 @@ export function CapsuleCard({ capsule, onPress }: CapsuleCardProps) {
                 ? "bg-sage"
                 : capsule.status === "sealed"
                   ? "bg-sage/10"
-                  : "bg-[#E8EAEE] dark:bg-[#353C48]"
+                  : "bg-muted dark:bg-brown-light"
             }`}
           >
             <Icon
               size={12}
               color={
                 capsule.status === "ready"
-                  ? "#EEF0F3"
+                  ? colors.cream
                   : capsule.status === "sealed"
-                    ? "#3B608F"
-                    : "#5A6072"
+                    ? colors.sage
+                    : colors.mutedForeground
               }
             />
             <Text
               className={`font-sans text-xs font-semibold ${
                 capsule.status === "ready"
-                  ? "text-[#EEF0F3]"
+                  ? "text-cream"
                   : capsule.status === "sealed"
                     ? "text-sage"
-                    : "text-[#5A6072]"
+                    : "text-muted-foreground"
               }`}
             >
               {config.label}
@@ -104,7 +85,7 @@ export function CapsuleCard({ capsule, onPress }: CapsuleCardProps) {
 
         {/* Content preview */}
         {capsule.content ? (
-          <View className="bg-[#E8EAEE]/50 dark:bg-[#353C48]/50 rounded-xl px-3 py-2.5 mb-3">
+          <View className="bg-muted/50 dark:bg-brown-light/50 rounded-xl px-3 py-2.5 mb-3">
             <RichTextView blocks={parseBlocks(capsule.content)} compact />
           </View>
         ) : null}
@@ -137,23 +118,23 @@ export function CapsuleCard({ capsule, onPress }: CapsuleCardProps) {
         )}
 
         {/* Footer */}
-        <View className="flex-row items-center justify-between pt-2.5 border-t border-[#C9CFD8]/50 dark:border-[#353C48]/50">
+        <View className="flex-row items-center justify-between pt-2.5 border-t border-border/50 dark:border-brown-light/50">
           <View className="flex-row items-center gap-1.5">
             {capsule.status === "draft" ? (
-              <Text className="font-sans text-xs text-[#5A6072]">
+              <Text className="font-sans text-xs text-muted-foreground">
                 Not sealed yet
               </Text>
             ) : (
               <>
                 {capsule.status === "sealed" && (
-                  <Timer size={12} color="#5A6072" />
+                  <Timer size={12} color={colors.mutedForeground} />
                 )}
                 <CountdownTimer openAt={capsule.openAt} size="sm" />
               </>
             )}
           </View>
           {capsule.openedAt && (
-            <Text className="font-sans text-xs text-[#5A6072]">
+            <Text className="font-sans text-xs text-muted-foreground">
               Opened {formatDate(capsule.openedAt)}
             </Text>
           )}

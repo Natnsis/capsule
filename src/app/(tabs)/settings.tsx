@@ -26,6 +26,7 @@ import { BiometricService } from "@/services/biometric-service";
 import { CapsuleRepository } from "@/db/repositories/capsule-repository";
 import { Toast } from "@/components/shared/toast";
 import { Dialog } from "@/components/shared/dialog";
+import { colors } from "@/constants/colors";
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -117,25 +118,25 @@ export default function SettingsScreen() {
       />
 
       {/* Fixed header */}
-      <View className="bg-[#EEF0F3] dark:bg-[#181B21] px-4" style={{ paddingTop: insets.top + 16, paddingBottom: 8 }}>
-        <Text className="font-heading text-3xl font-bold text-[#181B21] dark:text-[#EEF0F3]">
+      <View className="bg-cream dark:bg-brown px-4" style={{ paddingTop: insets.top + 16, paddingBottom: 8 }}>
+        <Text className="font-heading text-3xl font-bold text-brown dark:text-cream">
           Settings
         </Text>
-        <Text className="font-sans text-base text-[#5A6072]">
+        <Text className="font-sans text-base text-muted-foreground">
           Manage your preferences and data
         </Text>
       </View>
 
       {/* Scrollable content */}
       <ScrollView
-        className="flex-1 px-4 bg-[#EEF0F3] dark:bg-[#181B21]"
+        className="flex-1 px-4 bg-cream dark:bg-brown"
         contentContainerStyle={{ paddingBottom: 120 }}
       >
         {/* Name card */}
-        <View className="bg-[#EEF0F3] dark:bg-[#1C2027] rounded-2xl p-5 mb-6 border border-[#C9CFD8]/50">
+        <View className="bg-card dark:bg-brown-card rounded-2xl p-5 mb-6 border border-border/50 dark:border-brown-light/50">
           <View className="flex-row items-center gap-4">
             <View className="w-14 h-14 rounded-full bg-sage items-center justify-center">
-              <Text className="font-heading text-2xl font-bold text-[#EEF0F3]">
+              <Text className="font-heading text-2xl font-bold text-cream">
                 {(name || "G").charAt(0).toUpperCase()}
               </Text>
             </View>
@@ -143,30 +144,30 @@ export default function SettingsScreen() {
               {editingName ? (
                 <View className="flex-row items-center gap-2">
                   <TextInput
-                    className="flex-1 bg-[#E8EAEE] dark:bg-[#353C48] rounded-xl px-3 py-2 font-sans text-[#181B21] dark:text-[#EEF0F3] text-base"
+                    className="flex-1 bg-muted dark:bg-brown-light rounded-xl px-3 py-2 font-sans text-brown dark:text-cream text-base"
                     value={nameInput}
                     onChangeText={setNameInput}
                     autoFocus
                     placeholder="Your name"
-                    placeholderTextColor="#5A6072"
+                    placeholderTextColor={colors.mutedForeground}
                   />
                   <TouchableOpacity
                     onPress={handleSaveName}
                     className="bg-sage rounded-xl px-4 py-2"
                   >
-                    <Text className="font-sans text-sm font-semibold text-[#EEF0F3]">Save</Text>
+                    <Text className="font-sans text-sm font-semibold text-cream">Save</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
                 <>
-                  <Text className="font-heading text-lg font-semibold text-[#181B21] dark:text-[#EEF0F3]">
+                  <Text className="font-heading text-lg font-semibold text-brown dark:text-cream">
                     {name}
                   </Text>
                   <TouchableOpacity
                     onPress={() => { setNameInput(name); setEditingName(true); }}
                     className="flex-row items-center gap-1 mt-0.5"
                   >
-                    <PenLine size={12} color="#3B608F" />
+                    <PenLine size={12} color={colors.sage} />
                     <Text className="font-sans text-xs text-sage">Edit name</Text>
                   </TouchableOpacity>
                 </>
@@ -181,13 +182,13 @@ export default function SettingsScreen() {
             {statCards.map((card) => (
               <View
                 key={card.label}
-                className="bg-[#E8EAEE] dark:bg-[#353C48] rounded-2xl p-4 items-center"
+                className="bg-muted dark:bg-brown-light rounded-2xl p-4 items-center"
                 style={{ width: "47%" }}
               >
-                <Text className="font-heading text-3xl font-bold text-[#181B21] dark:text-[#EEF0F3] mb-1">
+                <Text className="font-heading text-3xl font-bold text-brown dark:text-cream mb-1">
                   {card.value}
                 </Text>
-                <Text className="font-sans text-xs text-[#5A6072]">{card.label}</Text>
+                <Text className="font-sans text-xs text-muted-foreground">{card.label}</Text>
               </View>
             ))}
           </View>
@@ -195,20 +196,20 @@ export default function SettingsScreen() {
 
         {/* Dark mode */}
         <View className="mb-6">
-          <Text className="font-heading text-sm font-semibold text-[#5A6072] uppercase tracking-wider mb-3 px-1">
+          <Text className="font-heading text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-1">
             Appearance
           </Text>
-          <View className="bg-[#EEF0F3] dark:bg-[#1C2027] rounded-2xl overflow-hidden border border-[#C9CFD8]/50">
+          <View className="bg-card dark:bg-brown-card rounded-2xl overflow-hidden border border-border/50 dark:border-brown-light/50">
             <View className="flex-row items-center px-4 py-4">
-              <Moon size={20} color="#5A6072" />
-              <Text className="flex-1 font-sans text-base ml-3 text-[#181B21] dark:text-[#EEF0F3]">
+              <Moon size={20} color={colors.mutedForeground} />
+              <Text className="flex-1 font-sans text-base ml-3 text-brown dark:text-cream">
                 Dark Mode
               </Text>
               <Switch
                 value={mode === "dark"}
                 onValueChange={setDark}
-                trackColor={{ false: "#C9CFD8", true: "#3B608F" }}
-                thumbColor="#EEF0F3"
+                trackColor={{ false: colors.border, true: colors.sage }}
+                thumbColor={colors.cream}
               />
             </View>
           </View>
@@ -216,13 +217,13 @@ export default function SettingsScreen() {
 
         {/* Notifications */}
         <View className="mb-6">
-          <Text className="font-heading text-sm font-semibold text-[#5A6072] uppercase tracking-wider mb-3 px-1">
+          <Text className="font-heading text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-1">
             Notifications
           </Text>
-          <View className="bg-[#EEF0F3] dark:bg-[#1C2027] rounded-2xl overflow-hidden border border-[#C9CFD8]/50">
+          <View className="bg-card dark:bg-brown-card rounded-2xl overflow-hidden border border-border/50 dark:border-brown-light/50">
             <View className="flex-row items-center px-4 py-4">
-              <Bell size={20} color="#5A6072" />
-              <Text className="flex-1 font-sans text-base ml-3 text-[#181B21] dark:text-[#EEF0F3]">
+              <Bell size={20} color={colors.mutedForeground} />
+              <Text className="flex-1 font-sans text-base ml-3 text-brown dark:text-cream">
                 Capsule Reminders
               </Text>
               <Switch
@@ -238,8 +239,8 @@ export default function SettingsScreen() {
                     }
                   }
                 }}
-                trackColor={{ false: "#C9CFD8", true: "#3B608F" }}
-                thumbColor="#EEF0F3"
+                trackColor={{ false: colors.border, true: colors.sage }}
+                thumbColor={colors.cream}
               />
             </View>
           </View>
@@ -248,20 +249,20 @@ export default function SettingsScreen() {
         {/* Biometrics */}
         {biometricAvailable && (
           <View className="mb-6">
-            <Text className="font-heading text-sm font-semibold text-[#5A6072] uppercase tracking-wider mb-3 px-1">
+            <Text className="font-heading text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-1">
               Security
             </Text>
-            <View className="bg-[#EEF0F3] dark:bg-[#1C2027] rounded-2xl overflow-hidden border border-[#C9CFD8]/50">
+            <View className="bg-card dark:bg-brown-card rounded-2xl overflow-hidden border border-border/50 dark:border-brown-light/50">
               <View className="flex-row items-center px-4 py-4">
-                <Fingerprint size={20} color="#5A6072" />
-                <Text className="flex-1 font-sans text-base ml-3 text-[#181B21] dark:text-[#EEF0F3]">
+                <Fingerprint size={20} color={colors.mutedForeground} />
+                <Text className="flex-1 font-sans text-base ml-3 text-brown dark:text-cream">
                   Unlock Biometric Sealing
                 </Text>
                 <Switch
                   value={biometricEnabled}
                   onValueChange={handleToggleBiometric}
-                  trackColor={{ false: "#C9CFD8", true: "#3B608F" }}
-                  thumbColor="#EEF0F3"
+                  trackColor={{ false: colors.border, true: colors.sage }}
+                  thumbColor={colors.cream}
                 />
               </View>
             </View>
@@ -270,28 +271,28 @@ export default function SettingsScreen() {
 
         {/* Danger Zone */}
         <View className="mb-6">
-          <Text className="font-heading text-sm font-semibold text-[#5A6072] uppercase tracking-wider mb-3 px-1">
+          <Text className="font-heading text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-1">
             Danger Zone
           </Text>
-          <View className="bg-[#EEF0F3] dark:bg-[#1C2027] rounded-2xl overflow-hidden border border-[#C9CFD8]/50">
+          <View className="bg-card dark:bg-brown-card rounded-2xl overflow-hidden border border-border/50 dark:border-brown-light/50">
             <TouchableOpacity
               onPress={() => setShowDeleteDialog(true)}
               className="flex-row items-center px-4 py-4"
             >
-              <Trash2 size={20} color="#EF4444" />
-              <Text className="flex-1 font-sans text-base ml-3 text-red-500">
+              <Trash2 size={20} color={colors.destructive} />
+              <Text className="flex-1 font-sans text-base ml-3 text-destructive">
                 Delete All Data
               </Text>
-              <ChevronRight size={18} color="#5A6072" />
+              <ChevronRight size={18} color={colors.mutedForeground} />
             </TouchableOpacity>
           </View>
         </View>
 
         <View className="items-center pb-8">
-          <Text className="font-sans text-xs text-[#5A6072]">
+          <Text className="font-sans text-xs text-muted-foreground">
             TimeCapsule v1.0.0
           </Text>
-          <Text className="font-sans text-xs text-[#5A6072] mt-1">
+          <Text className="font-sans text-xs text-muted-foreground mt-1">
             All data stored locally on this device
           </Text>
         </View>

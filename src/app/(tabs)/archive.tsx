@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { View, ScrollView } from "react-native";
+import { View, Text, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -30,12 +30,22 @@ export default function ArchiveScreen() {
 
   const displayCapsules = searchResults ?? openedCapsules ?? [];
 
+  const openedCount = openedCapsules?.length ?? 0;
+
   return (
     <ScrollView
-      className="flex-1 bg-[#EEF0F3] dark:bg-[#181B21]"
+      className="flex-1 bg-cream dark:bg-brown"
       contentContainerStyle={{ paddingBottom: 120 }}
     >
-      <View style={{ paddingTop: insets.top + 12 }} className="px-4 pb-2">
+      <View style={{ paddingTop: insets.top + 16 }} className="px-4 pb-2">
+        <Text className="font-heading text-3xl font-bold text-brown dark:text-cream">
+          Archive
+        </Text>
+        <Text className="font-sans text-sm text-muted-foreground mt-0.5 mb-4">
+          {openedCount > 0
+            ? `${openedCount} ${openedCount === 1 ? "memory" : "memories"} opened`
+            : "Opened capsules will live here"}
+        </Text>
         <SearchBar
           value={searchQuery}
           onChangeText={handleSearch}

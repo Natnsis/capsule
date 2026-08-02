@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
 import { View, Text, Modal, TouchableOpacity, Pressable } from "react-native";
+import { useColorScheme } from "nativewind";
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
+import { colors } from "@/constants/colors";
 import {
   startOfMonth,
   endOfMonth,
@@ -25,6 +27,8 @@ interface CalendarPickerProps {
 }
 
 export function CalendarPicker({ visible, currentValue, onSelect, onClose }: CalendarPickerProps) {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === "dark";
   const today = useMemo(() => new Date(), []);
   const initialDate = currentValue ? new Date(currentValue) : today;
   const [viewDate, setViewDate] = useState(initialDate);
@@ -40,24 +44,24 @@ export function CalendarPicker({ visible, currentValue, onSelect, onClose }: Cal
       <Pressable className="flex-1 bg-black/50 justify-center items-center px-6" onPress={onClose}>
         <Pressable
           onPress={(e) => e.stopPropagation()}
-          className="bg-[#EEF0F3] dark:bg-[#1C2027] rounded-3xl w-full max-w-sm overflow-hidden"
+          className="bg-card dark:bg-brown-card rounded-3xl w-full max-w-sm overflow-hidden"
         >
           {/* Header */}
           <View className="flex-row items-center justify-between px-6 pt-6 pb-2">
             <TouchableOpacity
               onPress={() => setViewDate((d) => subMonths(d, 1))}
-              className="w-9 h-9 rounded-full bg-[#E8EAEE] dark:bg-[#353C48] items-center justify-center"
+              className="w-9 h-9 rounded-full bg-muted dark:bg-brown-light items-center justify-center"
             >
-              <ChevronLeft size={18} color="#181B21" />
+              <ChevronLeft size={18} color={isDark ? colors.cream : colors.brown} />
             </TouchableOpacity>
-            <Text className="font-heading text-lg font-semibold text-[#181B21] dark:text-[#EEF0F3]">
+            <Text className="font-heading text-lg font-semibold text-brown dark:text-cream">
               {format(viewDate, "MMMM yyyy")}
             </Text>
             <TouchableOpacity
               onPress={() => setViewDate((d) => addMonths(d, 1))}
-              className="w-9 h-9 rounded-full bg-[#E8EAEE] dark:bg-[#353C48] items-center justify-center"
+              className="w-9 h-9 rounded-full bg-muted dark:bg-brown-light items-center justify-center"
             >
-              <ChevronRight size={18} color="#181B21" />
+              <ChevronRight size={18} color={isDark ? colors.cream : colors.brown} />
             </TouchableOpacity>
           </View>
 
@@ -65,7 +69,7 @@ export function CalendarPicker({ visible, currentValue, onSelect, onClose }: Cal
           <View className="flex-row px-6 pt-2 pb-1">
             {WEEKDAYS.map((day) => (
               <View key={day} className="items-center" style={{ width: "14.28%" }}>
-                <Text className="font-sans text-xs font-semibold text-[#5A6072]">{day}</Text>
+                <Text className="font-sans text-xs font-semibold text-muted-foreground">{day}</Text>
               </View>
             ))}
           </View>
@@ -95,12 +99,12 @@ export function CalendarPicker({ visible, currentValue, onSelect, onClose }: Cal
                   <Text
                     className={`font-sans text-sm ${
                       selected
-                        ? "text-[#EEF0F3] font-semibold"
+                        ? "text-cream font-semibold"
                         : isTodayDay
                           ? "text-sage font-semibold"
                           : past
-                            ? "text-[#C9CFD8] dark:text-[#353C48]"
-                            : "text-[#181B21] dark:text-[#EEF0F3]"
+                            ? "text-border dark:text-brown-light"
+                            : "text-brown dark:text-cream"
                     }`}
                   >
                     {format(day, "d")}

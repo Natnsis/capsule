@@ -11,6 +11,7 @@ import { formatDate } from "@/lib/date";
 import { parseBlocks } from "@/lib/rich-text";
 import { useCreateCapsule } from "@/hooks/use-capsules";
 import type { CreateCapsuleInput } from "@/types/capsule";
+import { colors } from "@/constants/colors";
 
 export default function PreviewScreen() {
   const router = useRouter();
@@ -102,7 +103,7 @@ export default function PreviewScreen() {
           Review your capsule before sealing it
         </Text>
 
-        <View className="bg-cream dark:bg-[#1C2027] rounded-2xl p-6 border border-border/50 mb-6">
+        <View className="bg-card dark:bg-brown-card rounded-2xl p-6 border border-border/50 dark:border-brown-light/50 mb-6">
           <Text className="font-heading text-2xl font-bold text-brown dark:text-cream mb-4">
             {title}
           </Text>
@@ -135,7 +136,7 @@ export default function PreviewScreen() {
 
           {requireBiometric && (
             <View className="flex-row items-center gap-2 bg-sage/10 rounded-full px-3 py-1.5 self-start mb-4">
-              <Fingerprint size={14} color="#3B608F" />
+              <Fingerprint size={14} color={colors.sage} />
               <Text className="font-sans text-xs text-sage font-semibold">
                 Protected with biometrics
               </Text>
@@ -163,7 +164,7 @@ export default function PreviewScreen() {
         </View>
 
         {error && (
-          <Text className="font-sans text-sm text-red-500 text-center mb-4">
+          <Text className="font-sans text-sm text-destructive text-center mb-4">
             {error}
           </Text>
         )}

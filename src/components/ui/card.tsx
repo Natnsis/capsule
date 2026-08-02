@@ -6,9 +6,9 @@ type CardProps = ViewProps & {
 
 export function Card({ variant = "default", className, style, ...props }: CardProps) {
   const variantClasses = {
-    default: "bg-cream dark:bg-[#1C2027]",
-    elevated: "bg-cream dark:bg-[#1C2027] shadow-md",
-    outline: "bg-cream dark:bg-[#1C2027] border border-border",
+    default: "bg-card dark:bg-brown-card",
+    elevated: "bg-card dark:bg-brown-card shadow-md",
+    outline: "bg-card dark:bg-brown-card border border-border/50 dark:border-brown-light/50",
   };
 
   return (

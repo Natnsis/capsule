@@ -7,7 +7,7 @@ type BadgeProps = ViewProps & {
 
 export function Badge({ variant = "default", label, className, ...props }: BadgeProps) {
   const variantClasses = {
-    default: "bg-muted dark:bg-[#353C48]",
+    default: "bg-muted dark:bg-brown-light",
     active: "bg-sage",
     outline: "bg-transparent border border-border",
   };

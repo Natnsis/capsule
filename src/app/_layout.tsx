@@ -18,6 +18,7 @@ import { useThemeStore } from "@/stores/theme-store";
 import { useOnboardingStore } from "@/stores/onboarding-store";
 import { useNotificationStore } from "@/stores/notification-store";
 import { CapsuleRepository } from "@/db/repositories/capsule-repository";
+import { colors } from "@/constants/colors";
 import { NotificationService } from "@/services/notification-service";
 import { reconcileCapsuleReminders } from "@/hooks/use-capsules";
 
@@ -104,8 +105,8 @@ export default function RootLayout() {
 
   if (!fontsLoaded || !booted) {
     return (
-      <View className="flex-1 items-center justify-center bg-[#EEF0F3]">
-        <ActivityIndicator size="large" color="#3B608F" />
+      <View className="flex-1 items-center justify-center bg-cream dark:bg-brown">
+        <ActivityIndicator size="large" color={colors.sage} />
       </View>
     );
   }
@@ -114,7 +115,7 @@ export default function RootLayout() {
     <GestureHandlerRootView className="flex-1">
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider>
-          <View className="flex-1 bg-[#EEF0F3] dark:bg-[#181B21]">
+          <View className="flex-1 bg-cream dark:bg-brown">
             <StatusBar style={nwScheme === "dark" ? "light" : "dark"} />
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="onboarding" />

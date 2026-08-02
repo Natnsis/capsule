@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Image } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColorScheme } from "nativewind";
+import { differenceInDays } from "date-fns";
 import { ArrowLeft, Trash2, Fingerprint } from "lucide-react-native";
 
 import { useCapsule, useDeleteCapsule, useSealDraft } from "@/hooks/use-capsules";
@@ -13,6 +14,7 @@ import { Dialog } from "@/components/shared/dialog";
 import { RichTextView } from "@/components/shared/rich-text-view";
 import { parseBlocks } from "@/lib/rich-text";
 import { formatDate } from "@/lib/date";
+import { colors } from "@/constants/colors";
 
 export default function CapsuleDetailScreen() {
   const router = useRouter();
@@ -73,7 +75,7 @@ export default function CapsuleDetailScreen() {
       <View style={{ paddingTop: insets.top + 8 }} className="px-4">
         <View className="flex-row items-center justify-between mb-6">
           <TouchableOpacity onPress={() => router.back()}>
-            <ArrowLeft size={24} color={isDark ? "#EEF0F3" : "#181B21"} />
+            <ArrowLeft size={24} color={isDark ? colors.cream : colors.brown} />
           </TouchableOpacity>
           <StatusBadge status={capsule.status} />
         </View>
@@ -124,21 +126,27 @@ export default function CapsuleDetailScreen() {
         )}
 
         {isLocked && (
-          <View className="bg-muted dark:bg-[#353C48] rounded-3xl p-8 items-center mb-6">
-            <View className="bg-sage/20 rounded-full p-6 mb-4">
+          <View className="bg-card dark:bg-brown-card rounded-3xl p-8 items-center mb-6 border border-border/50 dark:border-brown-light/50">
+            <View className="bg-sage/20 rounded-full p-6 mb-5">
               <View className="w-16 h-16 rounded-full bg-sage items-center justify-center">
                 <Text className="font-heading text-3xl text-cream font-bold">
                   {capsule.title.charAt(0).toUpperCase()}
                 </Text>
               </View>
             </View>
-            <Text className="font-heading text-2xl font-bold text-brown dark:text-cream text-center mb-2">
+            <Text className="font-heading text-2xl font-bold text-brown dark:text-cream text-center mb-1">
               {capsule.title}
             </Text>
-            <Text className="font-sans text-base text-muted-foreground text-center mb-4">
-              This capsule is sealed until {formatDate(capsule.openAt)}
+            <Text className="font-sans text-sm text-muted-foreground text-center mb-6">
+              Sealed until {formatDate(capsule.openAt)}
             </Text>
-            <CountdownTimer openAt={capsule.openAt} size="lg" />
+            <Text className="font-heading text-6xl font-bold text-secondary">
+              {Math.max(0, differenceInDays(new Date(capsule.openAt), new Date()))}
+            </Text>
+            <Text className="font-sans text-sm text-muted-foreground uppercase tracking-wider mt-1 mb-3">
+              days remaining
+            </Text>
+            <CountdownTimer openAt={capsule.openAt} size="sm" />
           </View>
         )}
 
@@ -153,7 +161,7 @@ export default function CapsuleDetailScreen() {
               </Text>
               {capsule.requireBiometric && (
                 <View className="flex-row items-center gap-2 bg-sage/10 rounded-full px-3 py-1.5">
-                  <Fingerprint size={14} color="#3B608F" />
+                  <Fingerprint size={14} color={colors.sage} />
                   <Text className="font-sans text-xs text-sage font-semibold">
                     Protected with biometrics
                   </Text>
@@ -212,8 +220,8 @@ export default function CapsuleDetailScreen() {
             onPress={handleDelete}
             className="flex-row items-center justify-center gap-2 py-4 mt-4"
           >
-            <Trash2 size={16} color="#EF4444" />
-            <Text className="font-sans text-sm text-red-500">
+            <Trash2 size={16} color={colors.destructive} />
+            <Text className="font-sans text-sm text-destructive">
               Delete Capsule
             </Text>
           </TouchableOpacity>

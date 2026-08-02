@@ -1,6 +1,7 @@
 import { View, Text } from "react-native";
 import type { CapsuleStatus } from "@/types/capsule";
 import { Lock, Unlock, Archive, PenLine } from "lucide-react-native";
+import { colors } from "@/constants/colors";
 
 interface StatusBadgeProps {
   status: CapsuleStatus;
@@ -10,30 +11,30 @@ const config: Record<CapsuleStatus, { label: string; icon: any; classes: string;
   draft: {
     label: "Draft",
     icon: PenLine,
-    classes: "bg-muted dark:bg-[#353C48]",
+    classes: "bg-muted dark:bg-brown-light",
     textClasses: "text-muted-foreground",
-    iconColor: "#5A6072",
+    iconColor: colors.mutedForeground,
   },
   sealed: {
     label: "Sealed",
     icon: Lock,
     classes: "bg-sage/20",
     textClasses: "text-sage",
-    iconColor: "#3B608F",
+    iconColor: colors.sage,
   },
   ready: {
     label: "Ready to Open",
     icon: Unlock,
     classes: "bg-primary",
     textClasses: "text-cream",
-    iconColor: "#EEF0F3",
+    iconColor: colors.cream,
   },
   opened: {
     label: "Opened",
     icon: Archive,
-    classes: "bg-muted dark:bg-[#353C48]",
+    classes: "bg-muted dark:bg-brown-light",
     textClasses: "text-muted-foreground",
-    iconColor: "#5A6072",
+    iconColor: colors.mutedForeground,
   },
 };
 

@@ -2,6 +2,7 @@ import { View, TouchableOpacity, Text } from "react-native";
 import { Tabs, useRouter, usePathname } from "expo-router";
 import { Home, Archive, Settings } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { colors } from "@/constants/colors";
 
 const tabs = [
   { name: "index", title: "Home", icon: Home },
@@ -33,7 +34,7 @@ export default function TabLayout() {
           className="absolute bottom-0 left-0 right-0 items-center pb-3"
           style={{ paddingBottom: insets.bottom + 10 }}
         >
-          <View className="flex-row items-center bg-[#181B21] dark:bg-[#0F1216] rounded-full px-3 py-2 gap-1 shadow-lg shadow-black/20">
+          <View className="flex-row items-center bg-brown dark:bg-brown-dark rounded-full px-3 py-2 gap-1 shadow-lg shadow-black/20">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = currentTab === tab.name;
@@ -48,10 +49,10 @@ export default function TabLayout() {
                 >
                   <Icon
                     size={20}
-                    color={isActive ? "#EEF0F3" : "#5A6072"}
+                    color={isActive ? colors.cream : colors.mutedForeground}
                   />
                   {isActive && (
-                    <Text className="text-[#EEF0F3] font-sans text-sm font-semibold ml-2">
+                    <Text className="text-cream font-sans text-sm font-semibold ml-2">
                       {tab.title}
                     </Text>
                   )}

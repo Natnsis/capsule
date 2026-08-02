@@ -11,6 +11,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { Lock } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
+import { colors } from "@/constants/colors";
 
 interface SealAnimationProps {
   onComplete: () => void;
@@ -57,12 +58,12 @@ export function SealAnimation({ onComplete }: SealAnimationProps) {
   }));
 
   return (
-    <View className="flex-1 items-center justify-center bg-background">
+    <View className="flex-1 items-center justify-center bg-cream dark:bg-brown">
       <Animated.View
         style={animatedIconStyle}
         className="bg-sage rounded-full p-8 mb-6"
       >
-        <Lock size={48} color="#EEF0F3" />
+        <Lock size={48} color={colors.cream} />
       </Animated.View>
       <Animated.Text
         style={animatedTextStyle}

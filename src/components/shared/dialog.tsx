@@ -17,14 +17,14 @@ interface DialogProps {
 
 const buttonStyles: Record<string, string> = {
   default: "bg-sage",
-  destructive: "bg-red-500",
-  cancel: "bg-[#E8EAEE] dark:bg-[#353C48]",
+  destructive: "bg-destructive",
+  cancel: "bg-muted dark:bg-brown-light",
 };
 
 const textStyles: Record<string, string> = {
-  default: "text-[#EEF0F3]",
-  destructive: "text-white",
-  cancel: "text-[#181B21] dark:text-[#EEF0F3]",
+  default: "text-cream",
+  destructive: "text-destructive-foreground",
+  cancel: "text-brown dark:text-cream",
 };
 
 export function Dialog({ visible, title, message, actions, onClose }: DialogProps) {
@@ -47,17 +47,17 @@ export function Dialog({ visible, title, message, actions, onClose }: DialogProp
     <Modal transparent visible={visible} animationType="none" onRequestClose={onClose}>
       <Pressable className="flex-1 bg-black/50 justify-center items-center px-6" onPress={onClose}>
         <Animated.View
-          className="bg-[#EEF0F3] dark:bg-[#1C2027] rounded-3xl w-full max-w-sm overflow-hidden"
+          className="bg-card dark:bg-brown-card rounded-3xl w-full max-w-sm overflow-hidden"
           style={{ opacity: fadeAnim, transform: [{ scale: scaleAnim }] }}
         >
           <Pressable onPress={(e) => e.stopPropagation()} className="px-6 pt-6 pb-4">
             {title ? (
-              <Text className="font-heading text-xl font-bold text-[#181B21] dark:text-[#EEF0F3] mb-2">
+              <Text className="font-heading text-xl font-bold text-brown dark:text-cream mb-2">
                 {title}
               </Text>
             ) : null}
             {message ? (
-              <Text className="font-sans text-base text-[#5A6072] leading-6">
+              <Text className="font-sans text-base text-muted-foreground leading-6">
                 {message}
               </Text>
             ) : null}

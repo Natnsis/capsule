@@ -5,6 +5,7 @@ import {
   type TextProps,
   ActivityIndicator,
 } from "react-native";
+import { colors } from "@/constants/colors";
 
 type ButtonProps = TouchableOpacityProps & {
   variant?: "primary" | "secondary" | "ghost" | "outline";
@@ -50,7 +51,7 @@ export function Button({
       disabled={disabled || loading}
       {...props}
     >
-      {loading && <ActivityIndicator className="mr-2" color={variant === "primary" ? "#EEF0F3" : "#3B608F"} />}
+      {loading && <ActivityIndicator className="mr-2" color={variant === "primary" ? colors.cream : colors.sage} />}
       <Text
         className={`font-sans font-semibold ${labelVariantColors[variant]} ${size === "lg" ? "text-lg" : size === "sm" ? "text-sm" : "text-base"}`}
         {...labelProps}

@@ -18,10 +18,10 @@ export function RichTextView({ blocks, compact, textClassName }: RichTextViewPro
           numberOfLines={compact ? 2 : undefined}
           className={
             compact
-              ? `font-sans text-sm leading-5 text-[#5A6072] ${block.type === "heading" ? "font-bold" : ""} ${block.underline ? "underline" : ""} ${textClassName ?? ""}`
+              ? `font-sans text-sm leading-5 text-muted-foreground ${block.type === "heading" ? "font-bold" : ""} ${block.underline ? "underline" : ""} ${textClassName ?? ""}`
               : block.type === "heading"
-                ? `font-heading text-xl font-bold text-[#181B21] dark:text-[#EEF0F3] ${block.underline ? "underline" : ""} ${textClassName ?? ""}`
-                : `font-sans text-base leading-7 text-[#181B21] dark:text-[#EEF0F3] ${block.underline ? "underline" : ""} ${textClassName ?? ""}`
+                ? `font-heading text-xl font-bold text-brown dark:text-cream ${block.underline ? "underline" : ""} ${textClassName ?? ""}`
+                : `font-sans text-base leading-7 text-brown dark:text-cream ${block.underline ? "underline" : ""} ${textClassName ?? ""}`
           }
         >
           {block.text}
