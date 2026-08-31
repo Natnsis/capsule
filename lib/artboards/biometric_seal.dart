@@ -1,0 +1,218 @@
+import 'package:flutter/material.dart';
+import '../nav.dart';
+import '../app_state.dart';
+import '../tokens.dart';
+import '../widgets/common.dart';
+import 'sealed_detail.dart';
+
+const _monthsShort = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+];
+
+class BiometricSealScreen extends StatefulWidget {
+  const BiometricSealScreen({
+    super.key,
+    required this.title,
+    required this.openOn,
+    this.note = '',
+  });
+  final String title;
+  final String note;
+  final DateTime openOn;
+
+  @override
+  State<BiometricSealScreen> createState() => _BiometricSealScreenState();
+}
+
+class _BiometricSealScreenState extends State<BiometricSealScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 2400))..repeat();
+  bool _sealing = false;
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  void _seal() {
+    if (_sealing) return;
+    setState(() => _sealing = true);
+    final store = AppScope.read(context);
+    Future.delayed(const Duration(milliseconds: 900), () async {
+      await store.addCapsule(
+        title: widget.title,
+        note: widget.note,
+        openAt: widget.openOn,
+      );
+      if (mounted) {
+        goReplace(
+          context,
+          SealedDetailScreen(title: widget.title, openOn: widget.openOn),
+        );
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    AppScope.of(context); // repaint on theme change
+    const white72 = Color(0xB8FFFFFF);
+    final d = widget.openOn;
+    final until = '${_monthsShort[d.month - 1]} ${d.day}, ${d.year}';
+    final title = widget.title.isEmpty ? 'this capsule' : '“${widget.title}”';
+    return Screen(
+      // Always a dark, focused "seal" moment — independent of app theme.
+      color: const Color(0xFF141019),
+      child: Stack(
+        children: [
+          Positioned(
+            top: -60,
+            left: -60,
+            child: Blob(
+              size: 300,
+              opacity: .7,
+              center: const Alignment(-0.2, -0.3),
+              colors: const [Color(0xFFC9A6E0), Color(0xFF6B3E9C), Color(0x00141019)],
+              stops: const [0, .55, 1],
+            ),
+          ),
+          Positioned(
+            bottom: -80,
+            right: -70,
+            child: Blob(
+              size: 320,
+              opacity: .55,
+              center: const Alignment(-0.2, -0.3),
+              colors: const [Color(0xFFF0C6D2), Color(0xFF8A5FB8), Color(0x00141019)],
+              stops: const [0, .5, 1],
+            ),
+          ),
+          Positioned.fill(
+            child: AdaptiveBody(
+            padding: const EdgeInsets.fromLTRB(30, 60, 30, 40),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: GestureDetector(
+                    onTap: () => back(context),
+                    child: IconChip(
+                      size: 44,
+                      radius: 22,
+                      color: Colors.white.withValues(alpha: .14),
+                      child: const Icon(Icons.arrow_back, size: 20, color: Colors.white),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 42),
+                Text('Seal $title\nuntil $until',
+                    textAlign: TextAlign.center,
+                    style: C.t(32,
+                        weight: FontWeight.w800,
+                        letterSpacing: -.03,
+                        height: 1.12,
+                        color: Colors.white)),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: 300,
+                  child: Text(
+                    "Your fingerprint locks this capsule. From now on, a PIN alone can't open it, edit it, or delete it — not on this phone, not by anyone.",
+                    textAlign: TextAlign.center,
+                    style: C.t(15, color: white72, height: 1.6),
+                  ),
+                ),
+                const SizedBox(height: 56),
+                GestureDetector(
+                  onTap: _seal,
+                  child: SizedBox(
+                    width: 184,
+                    height: 184,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        AnimatedBuilder(
+                          animation: _c,
+                          builder: (_, _) {
+                            final t = _c.value;
+                            final scale = 0.9 + t * 0.35;
+                            final opacity = t < 0.7 ? 0.7 * (1 - t / 0.7) : 0.0;
+                            return Transform.scale(
+                              scale: scale,
+                              child: Opacity(
+                                opacity: opacity.clamp(0, 1),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border:
+                                        Border.all(color: Colors.white.withValues(alpha: .22)),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 400),
+                          margin: const EdgeInsets.all(22),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white.withValues(alpha: _sealing ? .2 : .08),
+                            border: Border.all(color: Colors.white.withValues(alpha: .18)),
+                          ),
+                        ),
+                        const FingerprintGlyph(size: 76, color: Colors.white, stroke: 1.1),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 26),
+                Text(_sealing ? 'Sealing…' : 'Touch the sensor to seal',
+                    style: C.t(16, weight: FontWeight.w700, color: Colors.white)),
+                const SizedBox(height: 8),
+                Text('Face ID also works',
+                    style: C.t(13.5, color: Colors.white.withValues(alpha: .55))),
+                const SizedBox(height: 40),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: .09),
+                    borderRadius: BorderRadius.circular(26),
+                    border: Border.all(color: Colors.white.withValues(alpha: .14)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.only(top: 2),
+                        child: Icon(Icons.error_outline, size: 20, color: Color(0xFFF0C6D2)),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          "This is permanent. Sealed capsules can't be unsealed, edited, or deleted before their open day.",
+                          style: C.t(13, color: Colors.white.withValues(alpha: .8), height: 1.55),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                GestureDetector(
+                  onTap: () => back(context),
+                  child: Text('Cancel',
+                      style:
+                          C.t(15, weight: FontWeight.w700, color: Colors.white.withValues(alpha: .6))),
+                ),
+              ],
+            ),
+          )),
+        ],
+      ),
+    );
+  }
+}

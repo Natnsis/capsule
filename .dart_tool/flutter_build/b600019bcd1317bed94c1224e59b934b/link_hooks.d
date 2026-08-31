@@ -1,0 +1,1 @@
+ /home/nati/Projects/capsule/.dart_tool/flutter_build/b600019bcd1317bed94c1224e59b934b/link_hooks_result.json: 
