@@ -38,6 +38,22 @@ class _BiometricSealScreenState extends State<BiometricSealScreen>
       AnimationController(vsync: this, duration: const Duration(milliseconds: 2400))..repeat();
   bool _sealing = false;
 
+  /// Resolved once: this is a biometric seal AND the device can actually do it.
+  /// Drives the whole screen — glyph, copy, whether we prompt for a fingerprint.
+  bool _bio = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final store = AppScope.read(context);
+      final bio = widget.bioSealed &&
+          store.biometricEnabled &&
+          await Biometrics.instance.isEnrolled;
+      if (mounted && bio != _bio) setState(() => _bio = bio);
+    });
+  }
+
   @override
   void dispose() {
     _c.dispose();
@@ -49,14 +65,7 @@ class _BiometricSealScreenState extends State<BiometricSealScreen>
     setState(() => _sealing = true);
     final store = AppScope.read(context);
 
-    // Only gate on biometrics if the writer asked for it AND the device
-    // actually has a sensor — otherwise just seal it normally.
-    final useBio = widget.bioSealed &&
-        store.biometricEnabled &&
-        await Biometrics.instance.isAvailable;
-    if (!mounted) return;
-
-    if (useBio) {
+    if (_bio) {
       final ok = await Biometrics.instance
           .authenticate(context, 'Lock this capsule with your fingerprint');
       if (!ok) {
@@ -66,18 +75,24 @@ class _BiometricSealScreenState extends State<BiometricSealScreen>
     }
 
     await Future<void>.delayed(const Duration(milliseconds: 700));
-    await store.sealCapsule(
+    final sealed = await store.sealCapsule(
       id: widget.draftId,
       title: widget.title,
       note: widget.note,
       openAt: widget.openOn,
-      bioSealed: useBio,
+      bioSealed: _bio,
       photoCount: widget.photoCount,
     );
     if (mounted) {
-      goReplace(
+      // Reset the stack: dismissing the confirmation lands on the app root,
+      // not back inside the compose form.
+      goResetTo(
         context,
-        SealedDetailScreen(title: widget.title, openOn: widget.openOn),
+        SealedDetailScreen(
+          capsuleId: sealed.id,
+          title: widget.title,
+          openOn: widget.openOn,
+        ),
       );
     }
   }
@@ -118,7 +133,7 @@ class _BiometricSealScreenState extends State<BiometricSealScreen>
           ),
           Positioned.fill(
             child: AdaptiveBody(
-            padding: const EdgeInsets.fromLTRB(30, 60, 30, 40),
+            padding: const EdgeInsets.fromLTRB(30, 28, 30, 40),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -146,7 +161,9 @@ class _BiometricSealScreenState extends State<BiometricSealScreen>
                 SizedBox(
                   width: 300,
                   child: Text(
-                    "Your fingerprint locks this capsule. From now on, a PIN alone can't open it, edit it, or delete it — not on this phone, not by anyone.",
+                    _bio
+                        ? "Your fingerprint locks this capsule. From now on, a PIN alone can't open it, edit it, or delete it — not on this phone, not by anyone."
+                        : "Once sealed, this capsule can't be opened, edited, or deleted before its open day — on this phone or anywhere.",
                     textAlign: TextAlign.center,
                     style: C.t(15, color: white72, height: 1.6),
                   ),
@@ -190,17 +207,27 @@ class _BiometricSealScreenState extends State<BiometricSealScreen>
                             border: Border.all(color: Colors.white.withValues(alpha: .18)),
                           ),
                         ),
-                        const FingerprintGlyph(size: 76, color: Colors.white, stroke: 1.1),
+                        if (_bio)
+                          const FingerprintGlyph(size: 76, color: Colors.white, stroke: 1.1)
+                        else
+                          const LockGlyph(size: 64, color: Colors.white, stroke: 1.7),
                       ],
                     ),
                   ),
                 ),
                 const SizedBox(height: 26),
-                Text(_sealing ? 'Sealing…' : 'Touch the sensor to seal',
+                Text(
+                    _sealing
+                        ? 'Sealing…'
+                        : _bio
+                            ? 'Touch the sensor to seal'
+                            : 'Tap to seal this capsule',
                     style: C.t(16, weight: FontWeight.w700, color: Colors.white)),
-                const SizedBox(height: 8),
-                Text('Face ID also works',
-                    style: C.t(13.5, color: Colors.white.withValues(alpha: .55))),
+                if (_bio) ...[
+                  const SizedBox(height: 8),
+                  Text('Face ID also works',
+                      style: C.t(13.5, color: Colors.white.withValues(alpha: .55))),
+                ],
                 const SizedBox(height: 40),
                 Container(
                   width: double.infinity,

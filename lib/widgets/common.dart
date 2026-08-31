@@ -46,7 +46,9 @@ class Screen extends StatelessWidget {
         width: double.infinity,
         height: double.infinity,
         decoration: decoration,
-        child: child,
+        // Keep the background full-bleed but hold content clear of the
+        // status bar / notch. Bottom stays unpadded — the nav bars float.
+        child: SafeArea(bottom: false, child: child),
       ),
     );
   }

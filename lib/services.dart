@@ -1,11 +1,16 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import 'tokens.dart';
+
+/// Platform channel to the host for things no plugin covers (e.g. opening the
+/// OS biometric-enrollment screen). Mirrors `capsule/system` in MainActivity.
+const _systemChannel = MethodChannel('capsule/system');
 
 /// Device biometric unlock. On platforms without a real sensor (desktop) it
 /// falls back to an explicit "confirm it's you" dialog so the gate still works.
@@ -25,6 +30,30 @@ class Biometrics {
       _available = false;
     }
     return _available!;
+  }
+
+  /// True only when the device actually has a fingerprint / face enrolled that
+  /// this app can use — the real "is it set up in phone settings" check.
+  /// Always queried fresh so it reflects changes made while the app is open.
+  Future<bool> get isEnrolled async {
+    try {
+      if (!await _auth.isDeviceSupported()) return false;
+      final types = await _auth.getAvailableBiometrics();
+      return types.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Opens the OS screen where the user adds a fingerprint / face unlock.
+  /// Returns false if the host couldn't launch it.
+  Future<bool> openEnrollment() async {
+    try {
+      final ok = await _systemChannel.invokeMethod<bool>('openBiometricEnroll');
+      return ok ?? false;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// Returns true only if the user passed the check.
@@ -92,19 +121,28 @@ class Notifier {
     }
   }
 
+  bool get _hasOsGate => Platform.isAndroid || Platform.isIOS;
+
   Future<bool> get isGranted async {
     try {
-      if (Platform.isAndroid || Platform.isIOS) {
-        return await Permission.notification.isGranted;
-      }
+      if (_hasOsGate) return await Permission.notification.isGranted;
     } catch (_) {}
     // Desktop: treat as granted (no OS gate to route to).
-    return !(Platform.isAndroid || Platform.isIOS) ? true : false;
+    return !_hasOsGate;
+  }
+
+  /// Whether the OS will still show a permission prompt, or the user has to go
+  /// to Settings to change it.
+  Future<bool> get isPermanentlyDenied async {
+    try {
+      if (_hasOsGate) return await Permission.notification.isPermanentlyDenied;
+    } catch (_) {}
+    return false;
   }
 
   Future<bool> request() async {
     try {
-      if (Platform.isAndroid || Platform.isIOS) {
+      if (_hasOsGate) {
         final res = await Permission.notification.request();
         return res.isGranted;
       }

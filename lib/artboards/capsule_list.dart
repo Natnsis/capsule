@@ -137,7 +137,7 @@ class _CapsuleListScreenState extends State<CapsuleListScreen> {
     } else if (c.opened) {
       go(context, OpenDayScreen(title: c.title, capsuleId: c.id));
     } else {
-      go(context, SealedDetailScreen(title: c.title, openOn: c.openAt));
+      go(context, SealedDetailScreen(capsuleId: c.id, title: c.title, openOn: c.openAt));
     }
   }
 

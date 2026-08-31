@@ -20,7 +20,7 @@ class AppStore extends ChangeNotifier {
 
   AppBrightness _brightness = AppBrightness.light;
   DateTime? _birthday;
-  bool _notificationsEnabled = true;
+  bool _notificationsEnabled = false;
   bool _onboardingDone = false;
   String? _pin;
   DateTime? _wipeArmedAt;
@@ -41,8 +41,19 @@ class AppStore extends ChangeNotifier {
     _brightness = s['brightness'] == 'dark' ? AppBrightness.dark : AppBrightness.light;
     C.set(_brightness);
     _birthday = _parseDate(s['birthday']);
-    _notificationsEnabled = s['notifications'] != '0';
-    _biometricEnabled = s['biometric'] != '0';
+    // Default OFF: these only turn on once the user opts in *and* the OS grants
+    // the capability. Earlier builds defaulted them ON and persisted '1', so a
+    // one-time migration wipes that stale value.
+    if (s['settings_schema'] != '2') {
+      await db.setSetting('notifications', null);
+      await db.setSetting('biometric', null);
+      await db.setSetting('settings_schema', '2');
+      _notificationsEnabled = false;
+      _biometricEnabled = false;
+    } else {
+      _notificationsEnabled = s['notifications'] == '1';
+      _biometricEnabled = s['biometric'] == '1';
+    }
     _onboardingDone = s['onboarding_done'] == '1';
     final pin = s['pin'] ?? '';
     _pin = pin.isEmpty ? null : pin;
@@ -146,7 +157,7 @@ class AppStore extends ChangeNotifier {
   }
 
   // ---- Biometric sealing preference ----------------------------
-  bool _biometricEnabled = true;
+  bool _biometricEnabled = false;
   bool get biometricEnabled => _biometricEnabled;
   void setBiometricEnabled(bool value) {
     _biometricEnabled = value;

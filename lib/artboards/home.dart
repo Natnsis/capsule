@@ -98,7 +98,7 @@ class HomeScreen extends StatelessWidget {
                       context,
                       featured.opened
                           ? OpenDayScreen(title: featured.title, capsuleId: featured.id)
-                          : SealedDetailScreen(title: featured.title, openOn: featured.openAt),
+                          : SealedDetailScreen(capsuleId: featured.id, title: featured.title, openOn: featured.openAt),
                     ),
                     child: _featuredCard(featured),
                   )
@@ -111,7 +111,7 @@ class HomeScreen extends StatelessWidget {
                       context,
                       c.opened
                           ? OpenDayScreen(title: c.title, capsuleId: c.id)
-                          : SealedDetailScreen(title: c.title, openOn: c.openAt),
+                          : SealedDetailScreen(capsuleId: c.id, title: c.title, openOn: c.openAt),
                     ),
                     child: _capsuleRow(c),
                   ),

@@ -127,7 +127,7 @@ class _SearchScreenState extends State<SearchScreen> {
       onTap: () => go(
         context,
         c.sealed
-            ? SealedDetailScreen(title: c.title, openOn: c.openAt)
+            ? SealedDetailScreen(capsuleId: c.id, title: c.title, openOn: c.openAt)
             : OpenDayScreen(title: c.title),
       ),
       child: Container(

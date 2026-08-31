@@ -115,7 +115,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       context,
                       c.opened
                           ? OpenDayScreen(title: c.title, capsuleId: c.id)
-                          : SealedDetailScreen(title: c.title, openOn: c.openAt),
+                          : SealedDetailScreen(capsuleId: c.id, title: c.title, openOn: c.openAt),
                     );
                   },
                 ),

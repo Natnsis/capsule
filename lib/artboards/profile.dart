@@ -12,12 +12,64 @@ import '../tokens.dart';
 import '../widgets/common.dart';
 import 'create_pin.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserver {
+  // Real OS state, re-checked whenever the screen (re)appears. The toggles
+  // reflect `stored preference AND this` — never just the stored bool.
+  bool _notifGranted = false;
+  bool _bioEnrolled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncPermissions());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Coming back from the system settings screen — pick up any change.
+    if (state == AppLifecycleState.resumed) _syncPermissions();
+  }
+
+  Future<void> _syncPermissions() async {
+    final granted = await Notifier.instance.isGranted;
+    final enrolled = await Biometrics.instance.isEnrolled;
+    if (!mounted) return;
+    final store = AppScope.read(context);
+    // If the OS capability is gone, drop the stored opt-in so the two stay in
+    // sync and the user has to grant it again to turn the feature back on.
+    if (!granted && store.notificationsEnabled) store.setNotificationsEnabled(false);
+    if (!enrolled && store.biometricEnabled) store.setBiometricEnabled(false);
+    setState(() {
+      _notifGranted = granted;
+      _bioEnrolled = enrolled;
+    });
+  }
+
+  void _toast(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(msg), duration: const Duration(seconds: 3)));
+  }
 
   @override
   Widget build(BuildContext context) {
     final store = AppScope.of(context); // repaint on theme / birthday change
+    final notifOn = store.notificationsEnabled && _notifGranted;
+    final bioOn = store.biometricEnabled && _bioEnrolled;
     return Screen(
       decoration: BoxDecoration(gradient: C.screenGradient),
       child: SingleChildScrollView(
@@ -142,27 +194,31 @@ class ProfileScreen extends StatelessWidget {
                   _settingRow(
                     Icon(Icons.fingerprint, size: 19, color: C.ink),
                     'Biometric sealing',
-                    store.biometricEnabled
+                    bioOn
                         ? 'Offer fingerprint lock when sealing'
-                        : 'Off · capsules seal without biometrics',
+                        : _bioEnrolled
+                            ? 'Off · capsules seal without biometrics'
+                            : 'No fingerprint / face unlock set up on this device',
                     trailing: GestureDetector(
-                      onTap: () => store.setBiometricEnabled(!store.biometricEnabled),
-                      child: Toggle(on: store.biometricEnabled),
+                      onTap: _toggleBiometric,
+                      child: Toggle(on: bioOn),
                     ),
-                    onTap: () => store.setBiometricEnabled(!store.biometricEnabled),
+                    onTap: _toggleBiometric,
                   ),
                   _divider(),
                   _settingRow(
                     Icon(Icons.notifications_none_rounded, size: 19, color: C.ink),
                     'Notifications',
-                    store.notificationsEnabled
+                    notifOn
                         ? 'Reminders sent when a capsule opens'
-                        : 'Off · reminders only show in-app',
+                        : _notifGranted
+                            ? 'Off · reminders only show in-app'
+                            : 'Not allowed · turn on to grant permission',
                     trailing: GestureDetector(
-                      onTap: () => _toggleNotifications(context, store),
-                      child: Toggle(on: store.notificationsEnabled),
+                      onTap: _toggleNotifications,
+                      child: Toggle(on: notifOn),
                     ),
-                    onTap: () => _toggleNotifications(context, store),
+                    onTap: _toggleNotifications,
                   ),
                 ],
               ),
@@ -227,13 +283,60 @@ class ProfileScreen extends StatelessWidget {
     }
   }
 
-  Future<void> _toggleNotifications(BuildContext context, AppStore store) async {
-    final turningOn = !store.notificationsEnabled;
-    store.setNotificationsEnabled(turningOn);
-    if (!turningOn) return;
-    // Ask the OS; if it refuses, send the user to system settings to allow it.
+  Future<void> _toggleNotifications() async {
+    final store = AppScope.read(context);
+    final on = store.notificationsEnabled && _notifGranted;
+    if (on) {
+      store.setNotificationsEnabled(false);
+      setState(() {});
+      return;
+    }
+    // Turning on: always go through the OS. Every attempt re-prompts, or routes
+    // to Settings once the prompt can no longer be shown.
+    if (await Notifier.instance.isPermanentlyDenied) {
+      _toast('Allow notifications for Capsule in Settings, then come back.');
+      await Notifier.instance.openSettings();
+      return;
+    }
     final granted = await Notifier.instance.request();
-    if (!granted) await Notifier.instance.openSettings();
+    if (granted) {
+      store.setNotificationsEnabled(true);
+    } else if (await Notifier.instance.isPermanentlyDenied) {
+      _toast('Allow notifications for Capsule in Settings, then come back.');
+      await Notifier.instance.openSettings();
+    } else {
+      _toast('Notifications stay off until you allow them.');
+    }
+    await _syncPermissions();
+  }
+
+  Future<void> _toggleBiometric() async {
+    final store = AppScope.read(context);
+    final on = store.biometricEnabled && _bioEnrolled;
+    if (on) {
+      store.setBiometricEnabled(false);
+      setState(() {});
+      return;
+    }
+    // Turning on: needs a fingerprint / face actually enrolled on the device.
+    final enrolled = await Biometrics.instance.isEnrolled;
+    if (!enrolled) {
+      _toast('Set up a fingerprint or face unlock in your phone settings first.');
+      final opened = await Biometrics.instance.openEnrollment();
+      if (!opened) await Notifier.instance.openSettings();
+      await _syncPermissions();
+      return;
+    }
+    if (!mounted) return;
+    // Confirm it works before switching it on.
+    final ok = await Biometrics.instance
+        .authenticate(context, 'Confirm to turn on biometric sealing');
+    if (ok) {
+      store.setBiometricEnabled(true);
+    } else {
+      _toast('Biometric check didn’t pass — left off.');
+    }
+    await _syncPermissions();
   }
 
   Future<void> _pickBirthday(BuildContext context) async {
@@ -250,17 +353,31 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Widget _stat(String value, String label) => Expanded(
+        // Fixed height + shrink-to-fit value → all three cards match exactly,
+        // whatever the number or the "Longest" string turns out to be.
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          height: 86,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             color: C.glass,
             borderRadius: BorderRadius.circular(26),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(value, style: C.t(30, weight: FontWeight.w800, letterSpacing: -.03)),
-              Text(label, style: C.t(12.5, weight: FontWeight.w700, color: C.muted)),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(value,
+                    maxLines: 1,
+                    style: C.t(28, weight: FontWeight.w800, letterSpacing: -.03)),
+              ),
+              const SizedBox(height: 3),
+              Text(label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: C.t(12.5, weight: FontWeight.w700, color: C.muted)),
             ],
           ),
         ),
