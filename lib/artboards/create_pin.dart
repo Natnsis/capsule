@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../nav.dart';
+import '../services.dart';
 import '../tokens.dart';
 import '../widgets/common.dart';
 import 'main_shell.dart';
 
+enum _Phase { unlock, currentPin, create, confirm }
+
 class CreatePinScreen extends StatefulWidget {
-  const CreatePinScreen({super.key});
+  const CreatePinScreen({super.key, this.change = false});
+
+  /// Launched from Settings to change an existing PIN.
+  final bool change;
 
   @override
   State<CreatePinScreen> createState() => _CreatePinScreenState();
@@ -14,43 +20,132 @@ class CreatePinScreen extends StatefulWidget {
 
 class _CreatePinScreenState extends State<CreatePinScreen> {
   String _pin = '';
-  bool _error = false;
+  String _firstEntry = '';
+  String? _error;
+  late _Phase _phase;
 
   int get _entered => _pin.length;
 
+  bool _resolved = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _phase = widget.change ? _Phase.currentPin : _Phase.create;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_resolved) return;
+    _resolved = true;
+    if (!widget.change && AppScope.of(context).hasPin) {
+      _phase = _Phase.unlock;
+    }
+  }
+
   void _tap(String key) {
     final store = AppScope.read(context);
+    if (key == 'bio') return;
     setState(() {
-      _error = false;
+      _error = null;
       if (key == 'del') {
         if (_pin.isNotEmpty) _pin = _pin.substring(0, _pin.length - 1);
-      } else if (key == 'bio') {
-        goRoot(context, const MainShell());
-      } else if (_pin.length < 4) {
-        _pin += key;
-        if (_pin.length == 4) {
-          final entered = _pin;
-          Future.delayed(const Duration(milliseconds: 180), () {
-            if (!mounted) return;
-            if (store.hasPin && !store.checkPin(entered)) {
-              setState(() {
-                _pin = '';
-                _error = true;
-              });
-              return;
-            }
-            if (!store.hasPin) store.setPin(entered);
-            goRoot(context, const MainShell());
-          });
-        }
+        return;
+      }
+      if (_pin.length >= 4) return;
+      _pin += key;
+      if (_pin.length == 4) {
+        final entered = _pin;
+        Future.delayed(const Duration(milliseconds: 160), () {
+          if (mounted) _advance(store, entered);
+        });
       }
     });
   }
 
+  void _advance(AppStore store, String entered) {
+    switch (_phase) {
+      case _Phase.unlock:
+        if (store.checkPin(entered)) {
+          goRoot(context, const MainShell());
+        } else {
+          setState(() {
+            _pin = '';
+            _error = 'Wrong PIN. Try again.';
+          });
+        }
+      case _Phase.currentPin:
+        if (store.checkPin(entered)) {
+          setState(() {
+            _pin = '';
+            _phase = _Phase.create;
+          });
+        } else {
+          setState(() {
+            _pin = '';
+            _error = 'That’s not your current PIN.';
+          });
+        }
+      case _Phase.create:
+        setState(() {
+          _firstEntry = entered;
+          _pin = '';
+          _phase = _Phase.confirm;
+        });
+      case _Phase.confirm:
+        if (entered == _firstEntry) {
+          store.setPin(entered);
+          if (widget.change) {
+            back(context);
+          } else {
+            goRoot(context, const MainShell());
+          }
+        } else {
+          setState(() {
+            _pin = '';
+            _firstEntry = '';
+            _phase = _Phase.create;
+            _error = 'PINs didn’t match. Start again.';
+          });
+        }
+    }
+  }
+
+  ({String eyebrow, String title, String body}) _copyFor(_Phase p) {
+    switch (p) {
+      case _Phase.unlock:
+        return (
+          eyebrow: 'UNLOCK',
+          title: 'Enter your\n4-digit PIN',
+          body: 'Your capsules stay locked behind this PIN. Only this device, only you.',
+        );
+      case _Phase.currentPin:
+        return (
+          eyebrow: 'STEP 1 OF 3',
+          title: 'Enter your\ncurrent PIN',
+          body: 'Confirm it’s you before choosing a new PIN.',
+        );
+      case _Phase.create:
+        return (
+          eyebrow: widget.change ? 'STEP 2 OF 3' : 'STEP 1 OF 2',
+          title: widget.change ? 'Choose a\nnew PIN' : 'Set your\n4-digit PIN',
+          body:
+              "Everything stays on this phone. There's no account, no cloud, no reset link — so pick one you'll remember.",
+        );
+      case _Phase.confirm:
+        return (
+          eyebrow: widget.change ? 'STEP 3 OF 3' : 'STEP 2 OF 2',
+          title: 'Re-enter to\nconfirm',
+          body: 'Type the same four digits once more.',
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final store = AppScope.of(context); // repaint on theme change
-    final unlocking = store.hasPin;
+    AppScope.of(context); // repaint on theme change
+    final copy = _copyFor(_phase);
     final canGoBack = Navigator.of(context).canPop();
     return Screen(
       decoration: BoxDecoration(gradient: C.screenGradient),
@@ -88,22 +183,17 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
                       )
                     else
                       const SizedBox(width: 44, height: 44),
-                    Text(unlocking ? 'UNLOCK' : 'STEP 1 OF 2',
+                    Text(copy.eyebrow,
                         style: C.t(13, weight: FontWeight.w700, color: C.muted2, letterSpacing: .14)),
                   ],
                 ),
                 const SizedBox(height: 34),
-                Text(unlocking ? 'Enter your\n4-digit PIN' : 'Set your\n4-digit PIN',
+                Text(copy.title,
                     style: C.t(36, weight: FontWeight.w800, letterSpacing: -.03, height: 1.08)),
                 const SizedBox(height: 12),
                 SizedBox(
                   width: 290,
-                  child: Text(
-                    unlocking
-                        ? 'Your capsules stay locked behind this PIN. Only this device, only you.'
-                        : "Everything stays on this phone. There's no account, no cloud, no reset link — so pick one you'll remember.",
-                    style: C.t(15, color: C.bodyInk, height: 1.55),
-                  ),
+                  child: Text(copy.body, style: C.t(15, color: C.bodyInk, height: 1.55)),
                 ),
                 const SizedBox(height: 36),
                 Row(
@@ -118,7 +208,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
                 const SizedBox(height: 12),
                 Center(
                   child: Text(
-                    _error ? 'That PIN doesn’t match. Try again.' : '',
+                    _error ?? '',
                     style: C.t(12.5, weight: FontWeight.w600, color: const Color(0xFFE5484D)),
                   ),
                 ),
@@ -131,24 +221,30 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
                 const SizedBox(height: 14),
                 _KeypadRow(const ['add', '0', 'del'], onKey: _tap),
                 const SizedBox(height: 20),
-                GestureDetector(
-                  onTap: () => _tap('bio'),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.fingerprint, size: 18, color: C.muted),
-                      const SizedBox(width: 8),
-                      Text('Use Face ID / fingerprint instead',
-                          style: C.t(14, weight: FontWeight.w600, color: C.muted)),
-                    ],
+                if (_phase == _Phase.unlock)
+                  GestureDetector(
+                    onTap: _biometricUnlock,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.fingerprint, size: 18, color: C.muted),
+                        const SizedBox(width: 8),
+                        Text('Use Face ID / fingerprint instead',
+                            style: C.t(14, weight: FontWeight.w600, color: C.muted)),
+                      ],
+                    ),
                   ),
-                ),
               ],
             ),
           )),
         ],
       ),
     );
+  }
+
+  Future<void> _biometricUnlock() async {
+    final ok = await Biometrics.instance.authenticate(context, 'Unlock Capsule');
+    if (ok && mounted) goRoot(context, const MainShell());
   }
 
   Widget _pinDot(bool filled) => AnimatedContainer(

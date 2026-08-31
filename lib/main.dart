@@ -1,13 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'app_state.dart';
 import 'db.dart';
+import 'services.dart';
 import 'artboards/onboarding.dart';
 import 'artboards/create_pin.dart';
 import 'tokens.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(CapsuleApp(store: await _boot()));
+  final store = await _boot();
+  unawaited(Notifier.instance.init());
+  runApp(CapsuleApp(store: store));
 }
 
 Future<AppStore> _boot() async {

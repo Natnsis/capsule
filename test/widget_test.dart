@@ -49,9 +49,13 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.byType(CreatePinScreen), findsOneWidget);
 
-    for (final k in ['1', '2', '3', '4']) {
-      await tester.tap(find.text(k));
-      await tester.pump();
+    // First-time setup: enter the PIN, then confirm it.
+    for (var round = 0; round < 2; round++) {
+      for (final k in ['1', '2', '3', '4']) {
+        await tester.tap(find.text(k));
+        await tester.pump();
+      }
+      await tester.pump(const Duration(milliseconds: 250));
     }
     await tester.pump(const Duration(milliseconds: 300));
     await tester.pump(const Duration(seconds: 1));
@@ -91,9 +95,13 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
-    for (final k in ['1', '2', '3', '4']) {
-      await tester.tap(find.text(k));
-      await tester.pump();
+    // First-time setup: enter the PIN, then confirm it.
+    for (var round = 0; round < 2; round++) {
+      for (final k in ['1', '2', '3', '4']) {
+        await tester.tap(find.text(k));
+        await tester.pump();
+      }
+      await tester.pump(const Duration(milliseconds: 250));
     }
     await tester.pump(const Duration(milliseconds: 300));
     await tester.pump(const Duration(seconds: 1));

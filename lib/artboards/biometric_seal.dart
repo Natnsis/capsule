@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../nav.dart';
 import '../app_state.dart';
+import '../nav.dart';
+import '../services.dart';
 import '../tokens.dart';
 import '../widgets/common.dart';
 import 'sealed_detail.dart';
@@ -16,10 +17,16 @@ class BiometricSealScreen extends StatefulWidget {
     required this.title,
     required this.openOn,
     this.note = '',
+    this.bioSealed = false,
+    this.draftId,
+    this.photoCount = 0,
   });
   final String title;
   final String note;
   final DateTime openOn;
+  final bool bioSealed;
+  final int? draftId;
+  final int photoCount;
 
   @override
   State<BiometricSealScreen> createState() => _BiometricSealScreenState();
@@ -37,23 +44,42 @@ class _BiometricSealScreenState extends State<BiometricSealScreen>
     super.dispose();
   }
 
-  void _seal() {
+  Future<void> _seal() async {
     if (_sealing) return;
     setState(() => _sealing = true);
     final store = AppScope.read(context);
-    Future.delayed(const Duration(milliseconds: 900), () async {
-      await store.addCapsule(
-        title: widget.title,
-        note: widget.note,
-        openAt: widget.openOn,
-      );
-      if (mounted) {
-        goReplace(
-          context,
-          SealedDetailScreen(title: widget.title, openOn: widget.openOn),
-        );
+
+    // Only gate on biometrics if the writer asked for it AND the device
+    // actually has a sensor — otherwise just seal it normally.
+    final useBio = widget.bioSealed &&
+        store.biometricEnabled &&
+        await Biometrics.instance.isAvailable;
+    if (!mounted) return;
+
+    if (useBio) {
+      final ok = await Biometrics.instance
+          .authenticate(context, 'Lock this capsule with your fingerprint');
+      if (!ok) {
+        if (mounted) setState(() => _sealing = false);
+        return;
       }
-    });
+    }
+
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    await store.sealCapsule(
+      id: widget.draftId,
+      title: widget.title,
+      note: widget.note,
+      openAt: widget.openOn,
+      bioSealed: useBio,
+      photoCount: widget.photoCount,
+    );
+    if (mounted) {
+      goReplace(
+        context,
+        SealedDetailScreen(title: widget.title, openOn: widget.openOn),
+      );
+    }
   }
 
   @override

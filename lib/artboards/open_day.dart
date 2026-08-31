@@ -1,17 +1,41 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
-import '../nav.dart';
 import '../app_state.dart';
+import '../capsule_format.dart';
+import '../nav.dart';
+import '../rich_text.dart';
 import '../tokens.dart';
 import '../widgets/common.dart';
 import 'new_capsule.dart';
 
 class OpenDayScreen extends StatelessWidget {
-  const OpenDayScreen({super.key, this.title = 'To me, at 25'});
+  const OpenDayScreen({super.key, this.title = 'To me, at 25', this.capsuleId});
+
   final String title;
+  final int? capsuleId;
 
   @override
   Widget build(BuildContext context) {
-    AppScope.of(context); // repaint on theme change
+    final store = AppScope.of(context);
+    final capsule = capsuleId == null ? null : store.byId(capsuleId!);
+
+    final heading = capsule?.title ?? title;
+    final note = capsule?.note ??
+        "Hey. You're 25 now, which sounds impossible from here. I'm writing this "
+            "from the small desk by the window, the one that wobbles.\n\nThings I "
+            "hope are still true: you still call home on Sundays, you still keep "
+            "the notebook. Things I hope changed: the fear of starting.";
+    final images = capsule?.attachments.where((a) => a.isImage).toList() ?? const [];
+    final files = capsule?.attachments.where((a) => !a.isImage).toList() ?? const [];
+
+    final openedLine = capsule?.openedAt != null
+        ? 'Opened ${fmtDay(capsule!.openedAt!)}'
+        : 'Opened today · ${fmtDay(DateTime.now())}';
+    final writtenLine = capsule != null
+        ? 'Written ${fmtDay(capsule.createdAt)}'
+        : 'Written 12 Sep 2024 · sealed for 2 years, 3 days';
+
     return Screen(
       color: C.paper,
       child: SingleChildScrollView(
@@ -60,61 +84,70 @@ class OpenDayScreen extends StatelessWidget {
                 children: [
                   LockGlyph(size: 13, color: C.greenInk, stroke: 2.1, open: true),
                   const SizedBox(width: 7),
-                  Text('Opened today · 15 Sep 2026',
+                  Text(openedLine,
                       style: C.t(12.5, weight: FontWeight.w700, color: C.greenInk)),
                 ],
               ),
             ),
             const SizedBox(height: 18),
-            Text('To me, at 25',
+            Text(heading,
                 style: C.t(38, weight: FontWeight.w800, letterSpacing: -.035, height: 1.04)),
             const SizedBox(height: 8),
-            Text('Written 12 Sep 2024 · sealed for 2 years, 3 days',
-                style: C.t(13.5, weight: FontWeight.w600, color: C.muted3)),
+            Text(writtenLine, style: C.t(13.5, weight: FontWeight.w600, color: C.muted3)),
             const SizedBox(height: 20),
-            Row(
-              children: [
-                _photo(const [Color(0xFFE9D3DB), Color(0xFFC3AEE0)],
-                    const Alignment(0.9, 0.9), const [Color(0xFFFDF0F3), Color(0xFFB784C9)]),
-                const SizedBox(width: 10),
-                _photo(const [Color(0xFFD5E6DF), Color(0xFFB9C9E8)],
-                    const Alignment(-0.9, -0.9), const [Colors.white, Color(0xFF8FA9D6)]),
+            if (images.isNotEmpty) ...[
+              _ImageStrip(paths: images.map((a) => a.path).toList()),
+              const SizedBox(height: 22),
+            ] else if (capsule == null) ...[
+              Row(
+                children: [
+                  _demoPhoto(const [Color(0xFFE9D3DB), Color(0xFFC3AEE0)],
+                      const Alignment(0.9, 0.9), const [Color(0xFFFDF0F3), Color(0xFFB784C9)]),
+                  const SizedBox(width: 10),
+                  _demoPhoto(const [Color(0xFFD5E6DF), Color(0xFFB9C9E8)],
+                      const Alignment(-0.9, -0.9), const [Colors.white, Color(0xFF8FA9D6)]),
+                ],
+              ),
+              const SizedBox(height: 22),
+            ],
+            Markup(note, style: C.t(16.5, color: C.ink3, height: 1.75)),
+            if (files.isNotEmpty) ...[
+              const SizedBox(height: 22),
+              for (final f in files) ...[
+                _FileRow(name: f.name, kind: f.kind),
+                const SizedBox(height: 8),
               ],
-            ),
-            const SizedBox(height: 22),
-            Text(
-              "Hey. You're 25 now, which sounds impossible from here. I'm writing this from the small desk by the window, the one that wobbles.\n\nThings I hope are still true: you still call home on Sundays, you still make the bad jokes, you still keep the notebook. Things I hope changed: the fear of starting.",
-              style: C.t(16.5, color: C.ink3, height: 1.75),
-            ),
+            ],
             const SizedBox(height: 28),
             GestureDetector(
               onTap: () => go(context, const NewCapsuleScreen()),
               child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-              decoration: BoxDecoration(color: C.lav2, borderRadius: BorderRadius.circular(32)),
-              child: Row(
-                children: [
-                  Container(
-                    width: 46,
-                    height: 46,
-                    decoration: BoxDecoration(color: C.fill, borderRadius: BorderRadius.circular(16)),
-                    alignment: Alignment.center,
-                    child: Icon(Icons.add, size: 20, color: C.onFill),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Write one back', style: C.t(16, weight: FontWeight.w700)),
-                        Text('Reply to yourself, seal it for 2028',
-                            style: C.t(13, weight: FontWeight.w500, color: C.muted)),
-                      ],
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                decoration: BoxDecoration(color: C.lav2, borderRadius: BorderRadius.circular(32)),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 46,
+                      height: 46,
+                      decoration:
+                          BoxDecoration(color: C.fill, borderRadius: BorderRadius.circular(16)),
+                      alignment: Alignment.center,
+                      child: Icon(Icons.add, size: 20, color: C.onFill),
                     ),
-                  ),
-                  Icon(Icons.chevron_right, size: 20, color: C.ink),
-                ],
-              ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Write one back', style: C.t(16, weight: FontWeight.w700)),
+                          Text('Reply to yourself, seal it for later',
+                              style: C.t(13, weight: FontWeight.w500, color: C.muted)),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.chevron_right, size: 20, color: C.ink),
+                  ],
+                ),
               ),
             ),
           ],
@@ -123,7 +156,7 @@ class OpenDayScreen extends StatelessWidget {
     );
   }
 
-  Widget _photo(List<Color> base, Alignment blobAt, List<Color> blobColors) {
+  Widget _demoPhoto(List<Color> base, Alignment blobAt, List<Color> blobColors) {
     return Expanded(
       child: ClipRRect(
         borderRadius: BorderRadius.circular(22),
@@ -131,10 +164,7 @@ class OpenDayScreen extends StatelessWidget {
           height: 118,
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: base,
-            ),
+                begin: Alignment.topLeft, end: Alignment.bottomRight, colors: base),
           ),
           child: Stack(
             children: [
@@ -145,6 +175,72 @@ class OpenDayScreen extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ImageStrip extends StatelessWidget {
+  const _ImageStrip({required this.paths});
+  final List<String> paths;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 140,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: paths.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 10),
+        itemBuilder: (_, i) {
+          final file = File(paths[i]);
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(22),
+            child: SizedBox(
+              width: 150,
+              child: file.existsSync()
+                  ? Image.file(file, fit: BoxFit.cover)
+                  : ColoredBox(
+                      color: C.lav3,
+                      child: Icon(Icons.broken_image_outlined, color: C.muted),
+                    ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _FileRow extends StatelessWidget {
+  const _FileRow({required this.name, required this.kind});
+  final String name;
+  final String kind;
+
+  @override
+  Widget build(BuildContext context) {
+    final playable = kind == 'audio' || kind == 'video';
+    final leading = switch (kind) {
+      'audio' => Icons.music_note_rounded,
+      'video' => Icons.movie_outlined,
+      _ => Icons.insert_drive_file_outlined,
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(color: C.lav2, borderRadius: BorderRadius.circular(18)),
+      child: Row(
+        children: [
+          Icon(leading, size: 18, color: C.muted),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: C.t(13.5, weight: FontWeight.w600, color: C.ink)),
+          ),
+          Icon(playable ? Icons.play_circle_fill_rounded : Icons.download_outlined,
+              size: playable ? 22 : 17, color: C.muted3),
+        ],
       ),
     );
   }

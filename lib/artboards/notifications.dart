@@ -1,19 +1,44 @@
 import 'package:flutter/material.dart';
-import '../nav.dart';
 import '../app_state.dart';
+import '../capsule_format.dart';
+import '../nav.dart';
 import '../tokens.dart';
 import '../widgets/common.dart';
 import 'open_day.dart';
+import 'sealed_detail.dart';
 
-/// In-app Notifications screen: the list of reminders Capsule has sent, plus
-/// the per-capsule reminder schedule. (Not an OS lock screen — just how a
-/// Capsule notification looks and where they live in the app.)
-class NotificationsScreen extends StatelessWidget {
+/// In-app Notifications feed — every reminder Capsule has generated, whether or
+/// not the OS was allowed to surface it outside the app.
+class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
 
   @override
+  State<NotificationsScreen> createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends State<NotificationsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AppScope.read(context).markNotificationsRead();
+    });
+  }
+
+  String _ago(DateTime t) {
+    final d = DateTime.now().difference(t);
+    if (d.inMinutes < 1) return 'now';
+    if (d.inMinutes < 60) return '${d.inMinutes}m';
+    if (d.inHours < 24) return '${d.inHours}h';
+    if (d.inDays < 7) return '${d.inDays}d';
+    return fmtDay(t);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    AppScope.of(context); // repaint on theme change
+    final store = AppScope.of(context);
+    final feed = store.notificationsFeed;
+
     return Screen(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -44,88 +69,70 @@ class NotificationsScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 26),
-            Text('Recent', style: C.t(13, weight: FontWeight.w800, color: C.faint, letterSpacing: .14)),
-            const SizedBox(height: 12),
-            _NotifCard(
-              time: 'now',
-              title: '3 days until “To me, at 25” opens',
-              body: 'Sealed 12 Sep 2024. Get ready — it opens Monday at 08:00.',
-              unread: true,
-              onTap: () => back(context),
-            ),
-            const SizedBox(height: 10),
-            _NotifCard(
-              time: 'Yesterday',
-              gradient: const [Color(0xFFE7C9D4), Color(0xFFB49BD6)],
-              title: 'Your capsule is open',
-              body: '“To me, at 25” is ready to read. Tap to unlock with your PIN.',
-              onTap: () => go(context, const OpenDayScreen()),
-            ),
-            const SizedBox(height: 10),
-            _NotifCard(
-              time: '4 Jun',
-              gradient: const [Color(0xFFD7E7E0), Color(0xFFBFCFEA)],
-              title: 'Wedding day letter sealed',
-              body: 'Locked with your fingerprint until 04 Jun 2031.',
-              onTap: () {},
-            ),
-            const SizedBox(height: 26),
-            Text('REMINDER SCHEDULE',
-                style: C.t(13, weight: FontWeight.w800, color: C.faint, letterSpacing: .14)),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-              decoration: BoxDecoration(
-                color: C.glass,
-                borderRadius: BorderRadius.circular(28),
+            if (!store.notificationsEnabled)
+              Container(
+                margin: const EdgeInsets.only(bottom: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: C.glassSoft,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: C.glassLine),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.notifications_off_outlined, size: 18, color: C.muted),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text('Notifications are off — reminders only show here.',
+                          style: C.t(12.5, weight: FontWeight.w600, color: C.muted)),
+                    ),
+                  ],
+                ),
               ),
-              child: Column(
-                children: [
-                  _schedRow('3 days before', 'Heads-up'),
-                  _schedDivider(),
-                  _schedRow('Open day, 08:00', 'Open now'),
-                  _schedDivider(),
-                  _schedRow('If unread', 'Nudge after 24 h'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(Icons.info_outline, size: 16, color: C.muted3),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text('Capsule sends at most three reminders per capsule.',
-                      style: C.t(12.5, weight: FontWeight.w500, color: C.muted3)),
+            if (feed.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 60),
+                child: Center(
+                  child: Text('Nothing yet. Capsule will let you know when one opens.',
+                      textAlign: TextAlign.center,
+                      style: C.t(14, weight: FontWeight.w600, color: C.muted)),
+                ),
+              )
+            else
+              for (int i = 0; i < feed.length; i++) ...[
+                if (i > 0) const SizedBox(height: 10),
+                _NotifCard(
+                  time: _ago(feed[i].createdAt),
+                  title: feed[i].title,
+                  body: feed[i].body,
+                  unread: !feed[i].read,
+                  onTap: () {
+                    final id = feed[i].capsuleId;
+                    if (id == null) return;
+                    final c = store.byId(id);
+                    if (c == null) return;
+                    go(
+                      context,
+                      c.opened
+                          ? OpenDayScreen(title: c.title, capsuleId: c.id)
+                          : SealedDetailScreen(title: c.title, openOn: c.openAt),
+                    );
+                  },
                 ),
               ],
-            ),
           ],
         ),
       ),
     );
   }
-
-  Widget _schedDivider() =>
-      Container(height: 1, margin: const EdgeInsets.symmetric(vertical: 14), color: C.lav5);
-
-  Widget _schedRow(String a, String b) => Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(a, style: C.t(14.5, weight: FontWeight.w700, color: C.ink)),
-          Text(b, style: C.t(13.5, weight: FontWeight.w600, color: C.muted)),
-        ],
-      );
 }
 
-/// A single Capsule notification — the visual spec for a push/in-app alert.
 class _NotifCard extends StatelessWidget {
   const _NotifCard({
     required this.time,
     required this.title,
     required this.body,
     required this.onTap,
-    this.gradient,
     this.unread = false,
   });
 
@@ -133,7 +140,6 @@ class _NotifCard extends StatelessWidget {
   final String title;
   final String body;
   final VoidCallback onTap;
-  final List<Color>? gradient;
   final bool unread;
 
   @override
@@ -154,20 +160,9 @@ class _NotifCard extends StatelessWidget {
             Container(
               width: 42,
               height: 42,
-              decoration: BoxDecoration(
-                color: gradient == null ? C.fill : null,
-                gradient: gradient == null
-                    ? null
-                    : LinearGradient(
-                        begin: Alignment.topLeft, end: Alignment.bottomRight, colors: gradient!),
-                borderRadius: BorderRadius.circular(14),
-              ),
+              decoration: BoxDecoration(color: C.fill, borderRadius: BorderRadius.circular(14)),
               alignment: Alignment.center,
-              child: LockGlyph(
-                size: 19,
-                color: gradient == null ? C.onFill : const Color(0xFF3B2E5C),
-                stroke: 1.8,
-              ),
+              child: LockGlyph(size: 19, color: C.onFill, stroke: 1.8),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -176,8 +171,6 @@ class _NotifCard extends StatelessWidget {
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
                     children: [
                       Row(
                         children: [

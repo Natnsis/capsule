@@ -20,8 +20,11 @@ class HomeScreen extends StatelessWidget {
     final store = AppScope.of(context); // repaint on theme / wipe / capsule change
     final sealed = store.sealedCapsules;
     final opened = store.openedCapsules;
-    final featured = sealed.isNotEmpty ? sealed.first : null;
-    final rows = [...sealed.skip(1), ...opened].take(3).toList();
+    final featured = store.spotlight;
+    final rows = [...sealed, ...opened]
+        .where((c) => c.id != featured?.id)
+        .take(3)
+        .toList();
     return Screen(
       decoration: BoxDecoration(gradient: C.screenGradient),
       child: Stack(
@@ -91,8 +94,12 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(height: 20),
                 if (featured != null)
                   GestureDetector(
-                    onTap: () => go(context,
-                        SealedDetailScreen(title: featured.title, openOn: featured.openAt)),
+                    onTap: () => go(
+                      context,
+                      featured.opened
+                          ? OpenDayScreen(title: featured.title, capsuleId: featured.id)
+                          : SealedDetailScreen(title: featured.title, openOn: featured.openAt),
+                    ),
                     child: _featuredCard(featured),
                   )
                 else
@@ -102,9 +109,9 @@ class HomeScreen extends StatelessWidget {
                   GestureDetector(
                     onTap: () => go(
                       context,
-                      c.sealed
-                          ? SealedDetailScreen(title: c.title, openOn: c.openAt)
-                          : OpenDayScreen(title: c.title),
+                      c.opened
+                          ? OpenDayScreen(title: c.title, capsuleId: c.id)
+                          : SealedDetailScreen(title: c.title, openOn: c.openAt),
                     ),
                     child: _capsuleRow(c),
                   ),
@@ -159,7 +166,7 @@ class HomeScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Seal your first capsule',
+                  Text('No upcoming capsules',
                       style: C.t(16, weight: FontWeight.w700)),
                   const SizedBox(height: 2),
                   Text('Write something for future you.',
@@ -175,13 +182,17 @@ class HomeScreen extends StatelessWidget {
 
   Widget _featuredCard(Capsule c) {
     final daysLeft = c.openAt.difference(DateTime.now()).inDays;
-    final opensBadge = daysLeft <= 0
-        ? 'Opens today'
-        : daysLeft == 1
-            ? 'Opens tomorrow'
-            : daysLeft < 45
-                ? 'Opens in $daysLeft days'
-                : 'Opens ${fmtDay(c.openAt)}';
+    final opensBadge = c.opened
+        ? 'Opened ${fmtDay(c.openedAt ?? c.openAt)}'
+        : c.due
+            ? 'Ready to open'
+            : daysLeft <= 0
+                ? 'Opens today'
+                : daysLeft == 1
+                    ? 'Opens tomorrow'
+                    : daysLeft < 45
+                        ? 'Opens in $daysLeft days'
+                        : 'Opens ${fmtDay(c.openAt)}';
     return ClipRRect(
       borderRadius: BorderRadius.circular(34),
       child: Container(

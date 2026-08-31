@@ -1,1 +1,0 @@
- /home/nati/Projects/capsule/.dart_tool/flutter_build/86c381db01300e124c5222a91495b1db/native_assets.json: 

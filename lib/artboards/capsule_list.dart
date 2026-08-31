@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../capsule_format.dart';
 import '../nav.dart';
+import '../services.dart';
 import '../tokens.dart';
 import '../widgets/common.dart';
 import 'sealed_detail.dart';
 import 'open_day.dart';
+import 'new_capsule.dart';
 
-/// Every capsule on the device. A segmented toggle switches the list between
-/// the sealed capsules and the ones that have already opened.
+const _danger = Color(0xFFE5484D);
+
+/// Every capsule on the device, split by Sealed / Opened / Drafts.
 class CapsuleListScreen extends StatefulWidget {
   const CapsuleListScreen({super.key});
 
@@ -17,8 +20,58 @@ class CapsuleListScreen extends StatefulWidget {
 }
 
 class _CapsuleListScreenState extends State<CapsuleListScreen> {
-  /// 0 = sealed, 1 = opened.
-  int _tab = 0;
+  int _tab = 0; // 0 sealed, 1 opened, 2 drafts
+
+  Future<bool> _needsBio(AppStore store, Capsule c) async =>
+      c.bioSealed && store.biometricEnabled && await Biometrics.instance.isAvailable;
+
+  Future<void> _confirmDelete(AppStore store, Capsule c) async {
+    final needsBio = await _needsBio(store, c);
+    if (!mounted) return;
+    if (needsBio) {
+      final ok = await Biometrics.instance
+          .authenticate(context, 'Verify to delete “${c.title}”');
+      if (!ok || !mounted) return;
+    }
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: C.isDark ? C.lav1 : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text('Delete “${c.title}”?',
+            style: C.t(18, weight: FontWeight.w800, color: C.ink)),
+        content: Text(
+          c.sealed
+              ? 'This sealed capsule and its contents are gone for good.'
+              : 'This capsule will be permanently removed.',
+          style: C.t(14, color: C.bodyInk, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Keep', style: C.t(14, weight: FontWeight.w700, color: C.muted)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text('Delete', style: C.t(14, weight: FontWeight.w800, color: _danger)),
+          ),
+        ],
+      ),
+    );
+    if (yes == true) await store.deleteCapsule(c.id);
+  }
+
+  Future<void> _open(AppStore store, Capsule c) async {
+    final needsBio = await _needsBio(store, c);
+    if (!mounted) return;
+    if (needsBio) {
+      final ok = await Biometrics.instance
+          .authenticate(context, 'Unlock “${c.title}” with your fingerprint');
+      if (!ok || !mounted) return;
+    }
+    final opened = await store.openCapsule(c);
+    if (mounted) go(context, OpenDayScreen(title: opened.title, capsuleId: opened.id));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +79,8 @@ class _CapsuleListScreenState extends State<CapsuleListScreen> {
     final width = MediaQuery.sizeOf(context).width;
     final sealed = store.sealedCapsules;
     final opened = store.openedCapsules;
-    final list = _tab == 0 ? sealed : opened;
+    final drafts = store.draftCapsules;
+    final list = [sealed, opened, drafts][_tab];
 
     return Screen(
       decoration: BoxDecoration(gradient: C.screenGradient),
@@ -46,8 +100,11 @@ class _CapsuleListScreenState extends State<CapsuleListScreen> {
             const SizedBox(height: 22),
             _SegmentedToggle(
               index: _tab,
-              left: ('Sealed', sealed.length),
-              right: ('Opened', opened.length),
+              segments: [
+                ('Sealed', sealed.length),
+                ('Opened', opened.length),
+                ('Drafts', drafts.length),
+              ],
               onChanged: (i) => setState(() => _tab = i),
             ),
             const SizedBox(height: 16),
@@ -55,7 +112,7 @@ class _CapsuleListScreenState extends State<CapsuleListScreen> {
               Padding(
                 padding: const EdgeInsets.only(top: 48, left: 8),
                 child: Text(
-                  _tab == 0 ? 'No sealed capsules yet.' : 'Nothing has opened yet.',
+                  const ['No sealed capsules yet.', 'Nothing has opened yet.', 'No drafts.'][_tab],
                   style: C.t(14, weight: FontWeight.w600, color: C.muted),
                 ),
               )
@@ -64,12 +121,8 @@ class _CapsuleListScreenState extends State<CapsuleListScreen> {
                 if (i > 0) const SizedBox(height: 8),
                 _CapsuleRow(
                   capsule: list[i],
-                  onTap: () => go(
-                    context,
-                    list[i].sealed
-                        ? SealedDetailScreen(title: list[i].title, openOn: list[i].openAt)
-                        : OpenDayScreen(title: list[i].title),
-                  ),
+                  onTap: () => _rowTap(store, list[i]),
+                  trailing: _trailing(store, list[i]),
                 ),
               ],
           ],
@@ -77,24 +130,81 @@ class _CapsuleListScreenState extends State<CapsuleListScreen> {
       ),
     );
   }
+
+  void _rowTap(AppStore store, Capsule c) {
+    if (c.isDraft) {
+      go(context, NewCapsuleScreen(draft: c));
+    } else if (c.opened) {
+      go(context, OpenDayScreen(title: c.title, capsuleId: c.id));
+    } else {
+      go(context, SealedDetailScreen(title: c.title, openOn: c.openAt));
+    }
+  }
+
+  Widget _trailing(AppStore store, Capsule c) {
+    if (c.isDraft) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _pillButton('Edit', filled: false,
+              onTap: () => go(context, NewCapsuleScreen(draft: c))),
+          const SizedBox(width: 6),
+          _pillButton('Activate', filled: true,
+              onTap: () => go(context, NewCapsuleScreen(draft: c, jumpToSeal: true))),
+        ],
+      );
+    }
+    if (c.due) {
+      return _iconButton(Icons.lock_open_rounded, onTap: () => _open(store, c), accent: true);
+    }
+    return _iconButton(Icons.delete_outline, onTap: () => _confirmDelete(store, c));
+  }
+
+  Widget _iconButton(IconData icon, {required VoidCallback onTap, bool accent = false}) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: accent ? C.fill : C.glass,
+          shape: BoxShape.circle,
+        ),
+        alignment: Alignment.center,
+        child: Icon(icon, size: 18, color: accent ? C.onFill : C.muted),
+      ),
+    );
+  }
+
+  Widget _pillButton(String label, {required bool filled, required VoidCallback onTap}) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: filled ? C.fill : C.glass,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Text(label,
+            style: C.t(12, weight: FontWeight.w800, color: filled ? C.onFill : C.ink)),
+      ),
+    );
+  }
 }
 
-/// A sliding pill segmented control.
+/// A sliding pill segmented control (2 or 3 segments).
 class _SegmentedToggle extends StatelessWidget {
-  const _SegmentedToggle({
-    required this.index,
-    required this.left,
-    required this.right,
-    required this.onChanged,
-  });
+  const _SegmentedToggle({required this.index, required this.segments, required this.onChanged});
 
   final int index;
-  final (String, int) left;
-  final (String, int) right;
+  final List<(String, int)> segments;
   final ValueChanged<int> onChanged;
 
   @override
   Widget build(BuildContext context) {
+    final n = segments.length;
     return Container(
       height: 52,
       padding: const EdgeInsets.all(4),
@@ -103,38 +213,46 @@ class _SegmentedToggle extends StatelessWidget {
         borderRadius: BorderRadius.circular(19),
         border: Border.all(color: C.glassLine),
       ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          AnimatedAlign(
-            duration: const Duration(milliseconds: 240),
-            curve: Curves.easeOutCubic,
-            alignment: index == 0 ? Alignment.centerLeft : Alignment.centerRight,
-            child: FractionallySizedBox(
-              widthFactor: 0.5,
-              heightFactor: 1,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: C.fill,
-                  borderRadius: BorderRadius.circular(15),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF321E50).withValues(alpha: .18),
-                      blurRadius: 14,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+      child: LayoutBuilder(
+        builder: (context, box) {
+          final segW = box.maxWidth / n;
+          return Stack(
+            children: [
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 240),
+                curve: Curves.easeOutCubic,
+                left: segW * index,
+                top: 0,
+                bottom: 0,
+                width: segW,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: C.fill,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF321E50).withValues(alpha: .18),
+                        blurRadius: 14,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ),
-          Row(
-            children: [
-              Expanded(child: _segment(left.$1, left.$2, index == 0, () => onChanged(0))),
-              Expanded(child: _segment(right.$1, right.$2, index == 1, () => onChanged(1))),
+              Row(
+                children: [
+                  for (int i = 0; i < n; i++)
+                    SizedBox(
+                      width: segW,
+                      height: double.infinity,
+                      child: _segment(segments[i].$1, segments[i].$2, i == index,
+                          () => onChanged(i)),
+                    ),
+                ],
+              ),
             ],
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -147,14 +265,13 @@ class _SegmentedToggle extends StatelessWidget {
       child: Center(
         child: AnimatedDefaultTextStyle(
           duration: const Duration(milliseconds: 180),
-          style: C.t(14, weight: FontWeight.w700, color: fg),
+          style: C.t(13.5, weight: FontWeight.w700, color: fg),
           child: Text.rich(
             TextSpan(children: [
               TextSpan(text: label),
               TextSpan(
-                text: '  $count',
-                style: TextStyle(
-                    color: fg.withValues(alpha: .5), fontWeight: FontWeight.w800),
+                text: ' $count',
+                style: TextStyle(color: fg.withValues(alpha: .5), fontWeight: FontWeight.w800),
               ),
             ]),
           ),
@@ -165,13 +282,17 @@ class _SegmentedToggle extends StatelessWidget {
 }
 
 class _CapsuleRow extends StatelessWidget {
-  const _CapsuleRow({required this.capsule, required this.onTap});
+  const _CapsuleRow({required this.capsule, required this.onTap, required this.trailing});
   final Capsule capsule;
   final VoidCallback onTap;
+  final Widget trailing;
 
   @override
   Widget build(BuildContext context) {
-    final target = capsule.sealed ? capsule.openAt : (capsule.openedAt ?? capsule.openAt);
+    final target = capsule.opened ? (capsule.openedAt ?? capsule.openAt) : capsule.openAt;
+    final sub = capsule.isDraft
+        ? 'Draft · last edited ${fmtDay(capsule.createdAt)}'
+        : capsuleSubtitle(capsule);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
@@ -192,27 +313,49 @@ class _CapsuleRow extends StatelessWidget {
                 ),
               ),
               alignment: Alignment.center,
-              child: LockGlyph(size: 20, color: C.plum, stroke: 1.8, open: !capsule.sealed),
+              child: capsule.isDraft
+                  ? Icon(Icons.edit_note_rounded, size: 22, color: C.plum)
+                  : LockGlyph(size: 20, color: C.plum, stroke: 1.8, open: capsule.opened),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(capsule.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: C.t(16, weight: FontWeight.w700, letterSpacing: -.01)),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(capsule.title.isEmpty ? 'Untitled' : capsule.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: C.t(16, weight: FontWeight.w700, letterSpacing: -.01)),
+                      ),
+                      if (capsule.bioSealed) ...[
+                        const SizedBox(width: 6),
+                        Icon(Icons.fingerprint, size: 14, color: C.muted3),
+                      ],
+                    ],
+                  ),
                   const SizedBox(height: 2),
-                  Text(capsuleSubtitle(capsule),
+                  Text(sub,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: C.t(13, weight: FontWeight.w500, color: C.muted)),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            Text('${target.year}', style: C.t(12, weight: FontWeight.w700, color: C.muted)),
+            const SizedBox(width: 10),
+            if (capsule.isDraft)
+              trailing
+            else
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('${target.year}', style: C.t(12, weight: FontWeight.w700, color: C.muted)),
+                  const SizedBox(width: 8),
+                  trailing,
+                ],
+              ),
           ],
         ),
       ),

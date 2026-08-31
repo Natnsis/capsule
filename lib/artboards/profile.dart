@@ -1,6 +1,13 @@
+import 'dart:io';
+
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+
 import '../app_state.dart';
 import '../nav.dart';
+import '../services.dart';
 import '../tokens.dart';
 import '../widgets/common.dart';
 import 'create_pin.dart';
@@ -22,7 +29,30 @@ class ProfileScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Row(
                 children: [
-                  const Avatar(size: 78, borderWidth: 4),
+                  GestureDetector(
+                    onTap: () => _pickProfileImage(context),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        const Avatar(size: 78, borderWidth: 4),
+                        Positioned(
+                          right: -2,
+                          bottom: -2,
+                          child: Container(
+                            width: 26,
+                            height: 26,
+                            decoration: BoxDecoration(
+                              color: C.fill,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: C.paper, width: 2),
+                            ),
+                            alignment: Alignment.center,
+                            child: Icon(Icons.photo_camera_rounded, size: 13, color: C.onFill),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(
@@ -40,19 +70,34 @@ class ProfileScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  GestureDetector(
-                    onTap: () => AppScope.read(context).toggleBrightness(),
-                    child: IconChip(
-                      size: 46,
-                      radius: 23,
-                      color: C.glass,
-                      child: Icon(
-                        C.isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
-                        size: 20,
-                        color: C.ink,
+                  const SizedBox(width: 10),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      GestureDetector(
+                        onTap: () => AppScope.read(context).toggleBrightness(),
+                        child: IconChip(
+                          size: 40,
+                          radius: 20,
+                          color: C.glass,
+                          child: Icon(
+                            C.isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+                            size: 19,
+                            color: C.ink,
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 8),
+                      GestureDetector(
+                        onTap: () => _pickProfileImage(context),
+                        child: IconChip(
+                          size: 40,
+                          radius: 20,
+                          color: C.glass,
+                          child: Icon(Icons.image_outlined, size: 19, color: C.ink),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -60,11 +105,11 @@ class ProfileScreen extends StatelessWidget {
             const SizedBox(height: 16),
             Row(
               children: [
-                _stat('6', 'Capsules'),
+                _stat('${store.capsules.where((c) => !c.isDraft).length}', 'Capsules'),
                 const SizedBox(width: 10),
-                _stat('4', 'Sealed'),
+                _stat('${store.sealedCapsules.length}', 'Sealed'),
                 const SizedBox(width: 10),
-                _stat('2y', 'Longest'),
+                _stat(_longest(store), 'Longest'),
               ],
             ),
             const SizedBox(height: 12),
@@ -79,9 +124,9 @@ class ProfileScreen extends StatelessWidget {
                   _settingRow(
                     LockGlyph(size: 19, color: C.ink, stroke: 1.8),
                     'Change PIN',
-                    null,
+                    'Enter current, then choose a new one',
                     trailing: Icon(Icons.chevron_right, size: 18, color: C.muted3),
-                    onTap: () => go(context, const CreatePinScreen()),
+                    onTap: () => go(context, const CreatePinScreen(change: true)),
                   ),
                   _divider(),
                   _settingRow(
@@ -97,23 +142,27 @@ class ProfileScreen extends StatelessWidget {
                   _settingRow(
                     Icon(Icons.fingerprint, size: 19, color: C.ink),
                     'Biometric sealing',
-                    'Required to seal every capsule',
-                    trailing: const Toggle(on: true),
+                    store.biometricEnabled
+                        ? 'Offer fingerprint lock when sealing'
+                        : 'Off · capsules seal without biometrics',
+                    trailing: GestureDetector(
+                      onTap: () => store.setBiometricEnabled(!store.biometricEnabled),
+                      child: Toggle(on: store.biometricEnabled),
+                    ),
+                    onTap: () => store.setBiometricEnabled(!store.biometricEnabled),
                   ),
                   _divider(),
                   _settingRow(
                     Icon(Icons.notifications_none_rounded, size: 19, color: C.ink),
                     'Notifications',
                     store.notificationsEnabled
-                        ? 'Allowed on this device'
-                        : 'Off · reminders won’t be sent',
+                        ? 'Reminders sent when a capsule opens'
+                        : 'Off · reminders only show in-app',
                     trailing: GestureDetector(
-                      onTap: () => AppScope.read(context)
-                          .setNotificationsEnabled(!store.notificationsEnabled),
+                      onTap: () => _toggleNotifications(context, store),
                       child: Toggle(on: store.notificationsEnabled),
                     ),
-                    onTap: () => AppScope.read(context)
-                        .setNotificationsEnabled(!store.notificationsEnabled),
+                    onTap: () => _toggleNotifications(context, store),
                   ),
                 ],
               ),
@@ -132,6 +181,60 @@ class ProfileScreen extends StatelessWidget {
   ];
 
   String _fmtDate(DateTime d) => '${d.day} ${_months[d.month - 1]} ${d.year}';
+
+  String _longest(AppStore store) {
+    var maxDays = 0;
+    for (final c in store.capsules) {
+      if (c.isDraft) continue;
+      final d = c.openAt.difference(c.createdAt).inDays;
+      if (d > maxDays) maxDays = d;
+    }
+    if (maxDays <= 0) return '—';
+    if (maxDays < 60) return '${maxDays}d';
+    if (maxDays < 365) return '${(maxDays / 30).round()}mo';
+    final y = (maxDays / 365);
+    return y >= 10 ? '${y.round()}y' : '${y.toStringAsFixed(1).replaceAll('.0', '')}y';
+  }
+
+  Future<void> _pickProfileImage(BuildContext context) async {
+    final store = AppScope.read(context);
+    try {
+      const group = XTypeGroup(
+          label: 'images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'heic']);
+      final picked = await openFile(acceptedTypeGroups: const [group]);
+      if (picked == null) return;
+      final dir = Directory(
+          p.join((await getApplicationDocumentsDirectory()).path, 'profile'));
+      await dir.create(recursive: true);
+      // Replace whatever avatar was there before.
+      for (final f in dir.listSync()) {
+        if (f is File) {
+          try {
+            await f.delete();
+          } catch (_) {}
+        }
+      }
+      final ext = p.extension(picked.name).toLowerCase();
+      final dest = p.join(dir.path, 'avatar${ext.isEmpty ? '.img' : ext}');
+      await File(picked.path).copy(dest);
+      await store.setProfileImageFile(dest);
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Couldn’t set that image.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _toggleNotifications(BuildContext context, AppStore store) async {
+    final turningOn = !store.notificationsEnabled;
+    store.setNotificationsEnabled(turningOn);
+    if (!turningOn) return;
+    // Ask the OS; if it refuses, send the user to system settings to allow it.
+    final granted = await Notifier.instance.request();
+    if (!granted) await Notifier.instance.openSettings();
+  }
 
   Future<void> _pickBirthday(BuildContext context) async {
     final store = AppScope.read(context);

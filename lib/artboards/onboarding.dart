@@ -14,20 +14,20 @@ class _Slide {
 
 const _slides = <_Slide>[
   _Slide(
-    'assets/imgs/slide1',
-    'Say it now.\nRead it later.',
+    'assets/imgs/onboarding1.jpg',
+    'Say it now. Read it later.',
     'Write a note, add photos, pick the day it opens. A message to whoever you '
         'become.',
   ),
   _Slide(
-    'assets/imgs/slide2',
-    'Sealed means\nsealed.',
+    'assets/imgs/onboarding2.jpg',
+    'Sealed means sealed.',
     'Once you lock a capsule, not even you can open it early. No preview, no '
         'export, no shortcuts.',
   ),
   _Slide(
-    'assets/imgs/slide3',
-    'Future you is\nlistening.',
+    'assets/imgs/onboarding3.jpg',
+    'Future you is listening.',
     'Choose the open day and let it go. Capsule brings it back to you right on '
         'time.',
   ),
@@ -91,7 +91,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       border: Border.all(color: C.glassLine),
                     ),
                     child: Image.asset(
-                      'assets/imgs/icon',
+                      'assets/imgs/icon.png',
                       fit: BoxFit.cover,
                       errorBuilder: (_, _, _) => ColoredBox(
                         color: C.fill,
@@ -161,6 +161,7 @@ class _SlideView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final w = MediaQuery.sizeOf(context).width * 2 / 3;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -177,17 +178,23 @@ class _SlideView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 26),
-        Text(slide.title,
-            style: C.t(38, weight: FontWeight.w800, letterSpacing: -.035, height: 1.05)),
+        SizedBox(
+          width: w,
+          child: Text(slide.title,
+              style: C.t(38, weight: FontWeight.w800, letterSpacing: -.035, height: 1.05)),
+        ),
         const SizedBox(height: 14),
-        Text(slide.body, style: C.t(15.5, color: C.bodyInk, height: 1.55)),
+        SizedBox(
+          width: w,
+          child: Text(slide.body, style: C.t(15.5, color: C.bodyInk, height: 1.55)),
+        ),
         const SizedBox(height: 12),
       ],
     );
   }
 }
 
-/// Stand-in until the real slide artwork is dropped into `assets/imgs/`.
+/// Fallback if a slide image is missing.
 class _ImagePlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {

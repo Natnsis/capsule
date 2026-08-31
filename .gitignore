@@ -1,43 +1,64 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+migrate_working_dir/
 
-# dependencies
-node_modules/
+# IntelliJ / Android Studio
+*.iml
+*.ipr
+*.iws
+.idea/
 
-# Expo
-.expo/
-dist/
-web-build/
-expo-env.d.ts
+# VS Code
+.vscode/
 
-# Native
-.kotlin/
-*.orig.*
+# Flutter/Dart/Pub
+**/doc/api/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+build/
+
+# Flutter ephemeral / generated platform files
+**/generated_plugin_registrant.*
+/linux/flutter/ephemeral/
+/macos/Flutter/ephemeral/
+/windows/flutter/ephemeral/
+/ios/Flutter/ephemeral/
+/android/.gradle/
+/android/local.properties
+/android/app/debug
+/android/app/profile
+/android/app/release
+**/Flutter/Generated.xcconfig
+**/Flutter/flutter_export_environment.sh
+
+# Coverage
+coverage/
+
+# Symbols
+app.*.symbols
+app.*.map.json
+
+# Local secrets / env
 *.jks
+*.keystore
 *.p8
 *.p12
 *.key
-*.mobileprovision
-
-# Metro
-.metro-health-check*
-
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
-
-# macOS
-.DS_Store
 *.pem
-
-# local env files
+*.mobileprovision
+.env
 .env*.local
 
-# typescript
-*.tsbuildinfo
-
-example
-
-# generated native folders
-/ios
-/android
+# Scratch
+/test/shots/
