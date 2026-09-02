@@ -104,18 +104,21 @@ class AppStore extends ChangeNotifier {
     if (_db == null) return; // demo / tests: nothing to schedule
     final now = DateTime.now();
     for (final c in _capsules) {
-      final wants =
-          _notificationsEnabled && c.sealed && openMomentOf(c).isAfter(now);
-      if (wants) {
-        await Notifier.instance.schedule(
-          id: c.id,
-          title: '“${c.title}” is ready to open',
-          body: 'Your capsule’s open day has arrived. Tap to unlock.',
-          when: openMomentOf(c),
-        );
-      } else {
+      // Keep an alarm for any sealed capsule we haven't announced yet. If its
+      // moment already passed (e.g. sealed to open in seconds, then the app was
+      // closed) hand the OS an alarm a few seconds out so it still fires
+      // without the app.
+      if (!_notificationsEnabled || !c.sealed || c.notified) {
         await Notifier.instance.cancel(c.id);
+        continue;
       }
+      final moment = openMomentOf(c);
+      await Notifier.instance.schedule(
+        id: c.id,
+        title: '“${c.title}” is ready to open',
+        body: 'Your capsule’s open day has arrived. Tap to unlock.',
+        when: moment.isAfter(now) ? moment : now.add(const Duration(seconds: 10)),
+      );
     }
   }
 

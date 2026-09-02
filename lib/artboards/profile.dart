@@ -30,6 +30,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   bool _notifGranted = false;
   bool _bioEnrolled = false;
   bool _exactAlarms = true; // Android: may the OS fire exact-time alarms?
+  int _pendingAlarms = 0;
 
   @override
   void initState() {
@@ -54,6 +55,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
     final granted = await Notifier.instance.isGranted;
     final enrolled = await Biometrics.instance.isEnrolled;
     final exact = await Notifier.instance.canScheduleExact();
+    final pending = await Notifier.instance.pendingCount();
     if (!mounted) return;
     final store = AppScope.read(context);
     // If the OS capability is gone, drop the stored opt-in so the two stay in
@@ -64,7 +66,14 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
       _notifGranted = granted;
       _bioEnrolled = enrolled;
       _exactAlarms = exact;
+      _pendingAlarms = pending;
     });
+  }
+
+  Future<void> _sendSelfTest() async {
+    await Notifier.instance.scheduleSelfTest();
+    _toast('Now close Capsule completely. A test alert should arrive in ~1 min.');
+    await _syncPermissions();
   }
 
   /// Walks the user through the two OS grants that make a scheduled open-day
@@ -264,6 +273,14 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
                           ? Icon(Icons.check_rounded, size: 18, color: C.muted3)
                           : Icon(Icons.chevron_right, size: 18, color: C.muted3),
                       onTap: () => _tuneAlarmReliability(announce: true),
+                    ),
+                    _divider(),
+                    _settingRow(
+                      Icon(Icons.notifications_active_outlined, size: 19, color: C.ink),
+                      'Test background alert',
+                      '$_pendingAlarms scheduled now · tap, then close Capsule fully',
+                      trailing: Icon(Icons.chevron_right, size: 18, color: C.muted3),
+                      onTap: _sendSelfTest,
                     ),
                   ],
                 ],

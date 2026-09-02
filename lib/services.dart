@@ -227,6 +227,26 @@ class Notifier {
     } catch (_) {}
   }
 
+  /// How many alarms the OS currently holds for this app.
+  Future<int> pendingCount() async {
+    await init();
+    if (!_inited) return 0;
+    try {
+      return (await _plugin.pendingNotificationRequests()).length;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  /// A throwaway alarm a minute out, to prove the OS delivers with the app
+  /// killed. Fixed id, so tapping again just resets it.
+  Future<void> scheduleSelfTest() => schedule(
+        id: 2147483000,
+        title: 'Capsule background test',
+        body: 'You closed the app and still got this — scheduled alerts work.',
+        when: DateTime.now().add(const Duration(minutes: 1)),
+      );
+
   Future<bool> get isGranted async {
     try {
       if (_hasOsGate) return await Permission.notification.isGranted;
