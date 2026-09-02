@@ -12,6 +12,11 @@ import '../tokens.dart';
 import '../widgets/common.dart';
 import 'create_pin.dart';
 
+const _monthLabels = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+];
+
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -110,12 +115,14 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Bereket A.',
+                        Text(store.displayName,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: C.t(26, weight: FontWeight.w800, letterSpacing: -.03)),
                         const SizedBox(height: 2),
-                        Text('On this device since Sep 2024',
+                        Text(
+                            'On this device since '
+                            '${_monthLabels[store.installedAt.month - 1]} ${store.installedAt.year}',
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: C.t(13.5, weight: FontWeight.w600, color: C.muted)),
@@ -141,12 +148,12 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
                       ),
                       const SizedBox(height: 8),
                       GestureDetector(
-                        onTap: () => _pickProfileImage(context),
+                        onTap: () => _editName(context),
                         child: IconChip(
                           size: 40,
                           radius: 20,
                           color: C.glass,
-                          child: Icon(Icons.image_outlined, size: 19, color: C.ink),
+                          child: Icon(Icons.edit_outlined, size: 19, color: C.ink),
                         ),
                       ),
                     ],
@@ -185,10 +192,18 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
                     Icon(Icons.cake_outlined, size: 19, color: C.ink),
                     'Birthday',
                     store.hasBirthday
-                        ? _fmtDate(store.birthday!)
+                        ? _fmtMonthDay(store.birthday!)
                         : 'Not set · used for capsule open dates',
                     trailing: Icon(Icons.chevron_right, size: 18, color: C.muted3),
                     onTap: () => _pickBirthday(context),
+                  ),
+                  _divider(),
+                  _settingRow(
+                    Icon(Icons.schedule, size: 19, color: C.ink),
+                    'Opens at',
+                    '${store.openTimeLabel} · when your capsules unlock',
+                    trailing: Icon(Icons.chevron_right, size: 18, color: C.muted3),
+                    onTap: () => _pickOpenTime(context),
                   ),
                   _divider(),
                   _settingRow(
@@ -231,25 +246,21 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
     );
   }
 
-  static const _months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-  ];
+  String _fmtMonthDay(DateTime d) => '${d.day} ${_monthLabels[d.month - 1]}';
 
-  String _fmtDate(DateTime d) => '${d.day} ${_months[d.month - 1]} ${d.year}';
-
+  /// Longest a capsule is / was sealed for. Only whole years read as an
+  /// achievement — anything under a year shows "—". Partial years roll to the
+  /// nearest whole (1y 7mo → 2y).
   String _longest(AppStore store) {
-    var maxDays = 0;
+    var max = Duration.zero;
     for (final c in store.capsules) {
       if (c.isDraft) continue;
-      final d = c.openAt.difference(c.createdAt).inDays;
-      if (d > maxDays) maxDays = d;
+      final span = (c.openedAt ?? c.openAt).difference(c.createdAt);
+      if (span > max) max = span;
     }
-    if (maxDays <= 0) return '—';
-    if (maxDays < 60) return '${maxDays}d';
-    if (maxDays < 365) return '${(maxDays / 30).round()}mo';
-    final y = (maxDays / 365);
-    return y >= 10 ? '${y.round()}y' : '${y.toStringAsFixed(1).replaceAll('.0', '')}y';
+    final years = max.inDays / 365;
+    if (years < 1) return '—';
+    return '${years.round()}y';
   }
 
   Future<void> _pickProfileImage(BuildContext context) async {
@@ -339,25 +350,45 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
     await _syncPermissions();
   }
 
+  Future<void> _editName(BuildContext context) async {
+    final store = AppScope.read(context);
+    final saved = await showDialog<String?>(
+      context: context,
+      builder: (_) => _NameDialog(initial: store.name),
+    );
+    // null = dismissed; '' = cleared → falls back to "Guest".
+    if (saved != null) store.setName(saved);
+  }
+
+  Future<void> _pickOpenTime(BuildContext context) async {
+    final store = AppScope.read(context);
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: store.openTime,
+      helpText: 'When your capsules unlock',
+    );
+    if (picked != null) store.setOpenTime(picked);
+  }
+
   Future<void> _pickBirthday(BuildContext context) async {
     final store = AppScope.read(context);
-    final now = DateTime.now();
-    final picked = await showDatePicker(
+    final result = await showModalBottomSheet<DateTime>(
       context: context,
-      initialDate: store.birthday ?? DateTime(now.year - 25, now.month, now.day),
-      firstDate: DateTime(1900),
-      lastDate: now,
-      helpText: 'Select your birthday',
+      backgroundColor: C.paper,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (_) =>
+          _BirthdaySheet(initial: store.birthday ?? DateTime(2000, 1, 1)),
     );
-    if (picked != null) store.setBirthday(picked);
+    if (result != null) store.setBirthday(result);
   }
 
   Widget _stat(String value, String label) => Expanded(
         // Fixed height + shrink-to-fit value → all three cards match exactly,
         // whatever the number or the "Longest" string turns out to be.
         child: Container(
-          height: 86,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          height: 94,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
             color: C.glass,
             borderRadius: BorderRadius.circular(26),
@@ -490,6 +521,164 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
                       style: C.t(14, weight: FontWeight.w700, color: C.ink2)),
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Name editor. Owns its [TextEditingController] so it is disposed only when the
+/// dialog route actually unmounts — never mid dismiss-animation.
+class _NameDialog extends StatefulWidget {
+  const _NameDialog({this.initial});
+  final String? initial;
+
+  @override
+  State<_NameDialog> createState() => _NameDialogState();
+}
+
+class _NameDialogState extends State<_NameDialog> {
+  late final TextEditingController _c =
+      TextEditingController(text: widget.initial ?? '');
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: C.isDark ? C.lav1 : Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      title: Text('Your name', style: C.t(18, weight: FontWeight.w800, color: C.ink)),
+      content: TextField(
+        controller: _c,
+        autofocus: true,
+        maxLength: 30,
+        textCapitalization: TextCapitalization.words,
+        cursorColor: C.ink,
+        style: C.t(16, weight: FontWeight.w600, color: C.ink),
+        decoration: InputDecoration(
+          counterText: '',
+          hintText: 'My Name',
+          hintStyle: C.t(16, weight: FontWeight.w600, color: C.faint),
+        ),
+        onSubmitted: (v) => Navigator.of(context).pop(v),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text('Cancel', style: C.t(14, weight: FontWeight.w700, color: C.muted)),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(_c.text),
+          child: Text('Save', style: C.t(14, weight: FontWeight.w800, color: C.ink)),
+        ),
+      ],
+    );
+  }
+}
+
+/// Month + day picker (no year). Owns its wheel controllers for the same reason
+/// as [_NameDialog]. Pops a `DateTime` in a fixed sentinel year.
+class _BirthdaySheet extends StatefulWidget {
+  const _BirthdaySheet({required this.initial});
+  final DateTime initial;
+
+  @override
+  State<_BirthdaySheet> createState() => _BirthdaySheetState();
+}
+
+class _BirthdaySheetState extends State<_BirthdaySheet> {
+  late int _month = widget.initial.month;
+  late int _day = widget.initial.day;
+  late final FixedExtentScrollController _monthCtrl =
+      FixedExtentScrollController(initialItem: _month - 1);
+  late final FixedExtentScrollController _dayCtrl =
+      FixedExtentScrollController(initialItem: _day - 1);
+
+  int get _daysInMonth => DateTime(2001, _month + 1, 0).day;
+
+  @override
+  void dispose() {
+    _monthCtrl.dispose();
+    _dayCtrl.dispose();
+    super.dispose();
+  }
+
+  Widget _wheel(FixedExtentScrollController ctrl, int count,
+          String Function(int) label, ValueChanged<int> onChanged) =>
+      SizedBox(
+        width: 120,
+        height: 176,
+        child: ListWheelScrollView.useDelegate(
+          controller: ctrl,
+          itemExtent: 44,
+          physics: const FixedExtentScrollPhysics(),
+          onSelectedItemChanged: onChanged,
+          childDelegate: ListWheelChildBuilderDelegate(
+            childCount: count,
+            builder: (_, i) => Center(
+              child: Text(label(i),
+                  style: C.t(20, weight: FontWeight.w700, color: C.ink3)),
+            ),
+          ),
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 14, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 44,
+              height: 5,
+              margin: const EdgeInsets.only(bottom: 18),
+              decoration: BoxDecoration(
+                  color: C.faint2, borderRadius: BorderRadius.circular(3)),
+            ),
+            Text('Your birthday', style: C.t(17, weight: FontWeight.w800)),
+            const SizedBox(height: 4),
+            Text('Month and day — no year needed',
+                style: C.t(13, weight: FontWeight.w600, color: C.muted3)),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _wheel(_monthCtrl, 12, (i) => _monthLabels[i], (i) {
+                  setState(() {
+                    _month = i + 1;
+                    if (_day > _daysInMonth) {
+                      _day = _daysInMonth;
+                      _dayCtrl.jumpToItem(_day - 1);
+                    }
+                  });
+                }),
+                _wheel(_dayCtrl, _daysInMonth, (i) => '${i + 1}',
+                    (i) => _day = i + 1),
+              ],
+            ),
+            const SizedBox(height: 14),
+            GestureDetector(
+              onTap: () =>
+                  Navigator.of(context).pop(DateTime(2000, _month, _day)),
+              child: Container(
+                height: 54,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                    color: C.fill, borderRadius: BorderRadius.circular(27)),
+                alignment: Alignment.center,
+                child: Text('Save',
+                    style: C.t(16, weight: FontWeight.w700, color: C.onFill)),
+              ),
             ),
           ],
         ),

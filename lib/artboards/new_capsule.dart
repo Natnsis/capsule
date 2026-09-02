@@ -165,7 +165,15 @@ class _NewCapsuleScreenState extends State<NewCapsuleScreen> {
   String get _openLabel {
     final d = _openOn;
     if (d == null) return _hasContent ? 'Pick a day →' : 'Not set yet';
-    return '${d.day} ${_months[d.month - 1]} ${d.year} · 08:00';
+    return '${d.day} ${_months[d.month - 1]} ${d.year} · '
+        '${AppScope.read(context).openTimeLabel}';
+  }
+
+  /// The chosen open day stamped with the user's preferred open time.
+  DateTime get _openAt {
+    final t = AppScope.read(context).openTime;
+    final base = _openOn ?? DateTime.now();
+    return DateTime(base.year, base.month, base.day, t.hour, t.minute);
   }
 
   /// Persists the current form as a draft (creating one if needed) and syncs
@@ -176,7 +184,7 @@ class _NewCapsuleScreenState extends State<NewCapsuleScreen> {
       id: _draftId,
       title: _title.text.trim(),
       note: _note.markup,
-      openAt: _openOn ?? DateTime.now().add(const Duration(days: 365)),
+      openAt: _openAt,
       photoCount: _imageCount,
     );
     _draftId = c.id;
@@ -204,7 +212,7 @@ class _NewCapsuleScreenState extends State<NewCapsuleScreen> {
       BiometricSealScreen(
         title: _title.text.trim(),
         note: _note.markup,
-        openOn: _openOn!,
+        openOn: _openAt,
         bioSealed: _bioSeal,
         draftId: id,
         photoCount: _imageCount,

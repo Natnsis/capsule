@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../nav.dart';
 import '../app_state.dart';
+import '../services.dart';
 import '../tokens.dart';
 import '../widgets/common.dart';
 import 'open_day.dart';
@@ -12,7 +13,7 @@ const _monthsLong = [
 
 String _fmtDate(DateTime d) => '${d.day} ${_monthsLong[d.month - 1]} ${d.year}';
 
-class SealedDetailScreen extends StatelessWidget {
+class SealedDetailScreen extends StatefulWidget {
   const SealedDetailScreen({
     super.key,
     this.capsuleId,
@@ -25,20 +26,45 @@ class SealedDetailScreen extends StatelessWidget {
   final DateTime? openOn;
 
   @override
+  State<SealedDetailScreen> createState() => _SealedDetailScreenState();
+}
+
+class _SealedDetailScreenState extends State<SealedDetailScreen> {
+  /// Marks the capsule opened (behind a biometric check when it was sealed with
+  /// one) and moves on to the letter. Replaces this screen so a back-swipe
+  /// doesn't return to a stale "sealed" view.
+  Future<void> _open(AppStore store, Capsule c) async {
+    if (c.bioSealed &&
+        store.biometricEnabled &&
+        await Biometrics.instance.isAvailable) {
+      if (!mounted) return;
+      final ok = await Biometrics.instance
+          .authenticate(context, 'Unlock “${c.title}” with your fingerprint');
+      if (!ok || !mounted) return;
+    }
+    final opened = await store.openCapsule(c);
+    if (mounted) {
+      goReplace(context, OpenDayScreen(title: opened.title, capsuleId: opened.id));
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final store = AppScope.of(context); // repaint on theme / capsule change
-    final capsule = capsuleId == null ? null : store.byId(capsuleId!);
+    final capsule = widget.capsuleId == null ? null : store.byId(widget.capsuleId!);
 
-    final name = capsule?.title ?? title;
-    final open = capsule?.openAt ?? openOn ?? DateTime(2026, 9, 15);
+    final name = capsule?.title ?? widget.title;
+    final open = capsule != null
+        ? store.openMomentOf(capsule)
+        : (widget.openOn ?? DateTime(2026, 9, 15));
     final bio = capsule?.bioSealed ?? false;
-    final due = capsule?.due ?? false;
+    final due = capsule != null ? store.isDue(capsule) : false;
 
     final left = open.difference(DateTime.now());
     final days = left.inDays.clamp(0, 99999);
     final hours = (left.inHours % 24).clamp(0, 23);
     final mins = (left.inMinutes % 60).clamp(0, 59);
-    final openStr = '${_fmtDate(open)} · 08:00';
+    final openStr = '${_fmtDate(open)} · ${store.openTimeLabel}';
 
     return Screen(
       decoration: BoxDecoration(gradient: C.screenGradient),
@@ -132,9 +158,7 @@ class SealedDetailScreen extends StatelessWidget {
               mins: mins,
               openStr: openStr,
               due: due,
-              onOpen: due
-                  ? () => go(context, OpenDayScreen(title: name, capsuleId: capsule?.id))
-                  : null,
+              onOpen: due ? () => _open(store, capsule) : null,
             ),
 
             if (capsule != null) ...[
@@ -208,7 +232,7 @@ class SealedDetailScreen extends StatelessWidget {
       );
 }
 
-class _CountdownCard extends StatelessWidget {
+class _CountdownCard extends StatefulWidget {
   const _CountdownCard({
     required this.days,
     required this.hours,
@@ -224,35 +248,114 @@ class _CountdownCard extends StatelessWidget {
   final VoidCallback? onOpen;
 
   @override
+  State<_CountdownCard> createState() => _CountdownCardState();
+}
+
+class _CountdownCardState extends State<_CountdownCard>
+    with SingleTickerProviderStateMixin {
+  // A slow in-and-out breath. Only runs while the card is the thing to tap.
+  late final AnimationController _pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1600),
+  );
+
+  bool get _live => widget.due && widget.onOpen != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_live) _pulse.repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(_CountdownCard old) {
+    super.didUpdateWidget(old);
+    if (_live && !_pulse.isAnimating) {
+      _pulse.repeat(reverse: true);
+    } else if (!_live && _pulse.isAnimating) {
+      _pulse
+        ..stop()
+        ..value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final card = Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: C.glass,
-        borderRadius: BorderRadius.circular(32),
-      ),
-      child: Column(
-        children: [
-          Text(due ? 'READY TO OPEN' : 'OPENS IN',
-              style: C.t(12, weight: FontWeight.w700, color: C.muted3, letterSpacing: .14)),
-          const SizedBox(height: 12),
-          Row(
+    final due = widget.due;
+    // Once it's due the countdown is all zeros — swap it for the open prompt.
+    final content = due
+        ? Column(
             children: [
-              _tile('$days', 'days'),
-              const SizedBox(width: 10),
-              _tile(hours.toString().padLeft(2, '0'), 'hours'),
-              const SizedBox(width: 10),
-              _tile(mins.toString().padLeft(2, '0'), 'mins'),
+              Text('READY TO OPEN',
+                  style: C.t(12,
+                      weight: FontWeight.w700, color: C.muted3, letterSpacing: .14)),
+              const SizedBox(height: 18),
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(color: C.fill, shape: BoxShape.circle),
+                alignment: Alignment.center,
+                child: Icon(Icons.lock_open_rounded, size: 24, color: C.onFill),
+              ),
+              const SizedBox(height: 14),
+              Text('Tap to open it now',
+                  style: C.t(14, weight: FontWeight.w700, color: C.ink)),
             ],
+          )
+        : Column(
+            children: [
+              Text('OPENS IN',
+                  style: C.t(12,
+                      weight: FontWeight.w700, color: C.muted3, letterSpacing: .14)),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  _tile('${widget.days}', 'days'),
+                  const SizedBox(width: 10),
+                  _tile(widget.hours.toString().padLeft(2, '0'), 'hours'),
+                  const SizedBox(width: 10),
+                  _tile(widget.mins.toString().padLeft(2, '0'), 'mins'),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Text(widget.openStr,
+                  style: C.t(13, weight: FontWeight.w600, color: C.muted)),
+            ],
+          );
+
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (context, child) {
+        final t = _live ? Curves.easeInOut.transform(_pulse.value) : 0.0;
+        final card = Container(
+          padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(
+            color: C.glass,
+            borderRadius: BorderRadius.circular(32),
+            // Width is reserved in both states so the card never shifts.
+            border: Border.all(color: C.fill.withValues(alpha: .4 * t), width: 1.5),
+            boxShadow: t == 0
+                ? null
+                : [
+                    BoxShadow(
+                      color: C.fill.withValues(alpha: .10 + .16 * t),
+                      blurRadius: 16 + 16 * t,
+                      spreadRadius: 1 + 3 * t,
+                    ),
+                  ],
           ),
-          const SizedBox(height: 14),
-          Text(due ? 'Tap to open it now' : openStr,
-              style: C.t(13, weight: FontWeight.w600, color: C.muted)),
-        ],
-      ),
+          child: child,
+        );
+        return _live ? GestureDetector(onTap: widget.onOpen, child: card) : card;
+      },
+      child: content,
     );
-    if (onOpen == null) return card;
-    return GestureDetector(onTap: onOpen, child: card);
   }
 
   Widget _tile(String value, String label) => Expanded(

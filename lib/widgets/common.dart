@@ -2,7 +2,10 @@ import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../app_state.dart';
+import '../services.dart';
 import '../tokens.dart';
+
+const _danger = Color(0xFFE5484D);
 
 /// A plainly scrollable screen body. Content lays out top-to-bottom and the
 /// whole thing scrolls when the viewport is shorter than the content, so a
@@ -456,4 +459,175 @@ class Toggle extends StatelessWidget {
 class Stroke {
   static Widget icon(IconData data, {double size = 20, Color? color, double weight = 1.8}) =>
       Icon(data, size: size, color: color ?? C.ink, weight: weight * 200);
+}
+
+/// Bio-gates the delete (when the capsule was sealed with biometrics), then
+/// asks to confirm with copy that fits the capsule's state — a matter-of-fact
+/// warning for sealed/draft, a wistful one for a capsule you've already opened.
+/// Deletes it and returns true when it's gone.
+Future<bool> confirmAndDeleteCapsule(BuildContext context, Capsule c) async {
+  final store = AppScope.read(context);
+  if (c.bioSealed &&
+      store.biometricEnabled &&
+      await Biometrics.instance.isAvailable) {
+    if (!context.mounted) return false;
+    final ok = await Biometrics.instance
+        .authenticate(context, 'Verify to delete “${c.title}”');
+    if (!ok || !context.mounted) return false;
+  }
+  if (!context.mounted) return false;
+
+  final (String heading, String body, String action) = c.isDraft
+      ? (
+          'Delete this draft?',
+          'It was never sealed — this just clears it from your drafts.',
+          'Delete',
+        )
+      : c.sealed
+          ? (
+              'Delete “${c.title}”?',
+              'This sealed capsule and everything inside it are gone for good.',
+              'Delete',
+            )
+          : (
+              'Let this one go?',
+              'The note, any photos, and the day you opened “${c.title}” will be '
+                  'gone for good. There’s no getting the memory back.',
+              'Delete it',
+            );
+
+  final yes = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: C.isDark ? C.lav1 : Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      title: Text(heading, style: C.t(18, weight: FontWeight.w800, color: C.ink)),
+      content: Text(body, style: C.t(14, color: C.bodyInk, height: 1.5)),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(false),
+          child: Text('Keep it', style: C.t(14, weight: FontWeight.w700, color: C.muted)),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(true),
+          child: Text(action, style: C.t(14, weight: FontWeight.w800, color: _danger)),
+        ),
+      ],
+    ),
+  );
+  if (yes != true) return false;
+  await store.deleteCapsule(c.id);
+  return true;
+}
+
+/// A bottom sheet in the same gradient-card language as the profile "Coming
+/// soon" card. Used for features that only make sense once capsules leave the
+/// device (sharing, export).
+Future<void> showComingSoon(
+  BuildContext context, {
+  required IconData icon,
+  required String title,
+  required String message,
+}) {
+  return showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (_) => Padding(
+      padding: const EdgeInsets.all(12),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(34),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [C.card1, C.card3],
+            ),
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                right: -46,
+                bottom: -56,
+                child: Blob(
+                  size: 170,
+                  opacity: C.isDark ? .5 : .9,
+                  center: const Alignment(-0.3, -0.4),
+                  colors: const [Color(0xFFF6DCE2), Color(0xFF7E4FAE)],
+                ),
+              ),
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 12, 22, 18),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: C.ink2.withValues(alpha: .18),
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            height: 26,
+                            padding: const EdgeInsets.symmetric(horizontal: 11),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: C.glass,
+                              borderRadius: BorderRadius.circular(13),
+                            ),
+                            child: Text('COMING SOON',
+                                style: C.t(11.5,
+                                    weight: FontWeight.w800,
+                                    color: C.ink2,
+                                    letterSpacing: .08)),
+                          ),
+                          Icon(icon, size: 20, color: C.ink2),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Text(title,
+                          style: C.t(21,
+                              weight: FontWeight.w800,
+                              letterSpacing: -.02,
+                              color: C.ink2)),
+                      const SizedBox(height: 6),
+                      Text(message,
+                          style: C.t(13.5, color: C.ink2, height: 1.55)),
+                      const SizedBox(height: 18),
+                      GestureDetector(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: Container(
+                          height: 48,
+                          width: double.infinity,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: C.glassSoft,
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: Text('Got it',
+                              style: C.t(14.5,
+                                  weight: FontWeight.w700, color: C.ink2)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }

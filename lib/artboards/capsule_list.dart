@@ -9,7 +9,6 @@ import 'sealed_detail.dart';
 import 'open_day.dart';
 import 'new_capsule.dart';
 
-const _danger = Color(0xFFE5484D);
 
 /// Every capsule on the device, split by Sealed / Opened / Drafts.
 class CapsuleListScreen extends StatefulWidget {
@@ -25,41 +24,8 @@ class _CapsuleListScreenState extends State<CapsuleListScreen> {
   Future<bool> _needsBio(AppStore store, Capsule c) async =>
       c.bioSealed && store.biometricEnabled && await Biometrics.instance.isAvailable;
 
-  Future<void> _confirmDelete(AppStore store, Capsule c) async {
-    final needsBio = await _needsBio(store, c);
-    if (!mounted) return;
-    if (needsBio) {
-      final ok = await Biometrics.instance
-          .authenticate(context, 'Verify to delete “${c.title}”');
-      if (!ok || !mounted) return;
-    }
-    final yes = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: C.isDark ? C.lav1 : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Text('Delete “${c.title}”?',
-            style: C.t(18, weight: FontWeight.w800, color: C.ink)),
-        content: Text(
-          c.sealed
-              ? 'This sealed capsule and its contents are gone for good.'
-              : 'This capsule will be permanently removed.',
-          style: C.t(14, color: C.bodyInk, height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text('Keep', style: C.t(14, weight: FontWeight.w700, color: C.muted)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text('Delete', style: C.t(14, weight: FontWeight.w800, color: _danger)),
-          ),
-        ],
-      ),
-    );
-    if (yes == true) await store.deleteCapsule(c.id);
-  }
+  Future<void> _confirmDelete(AppStore store, Capsule c) =>
+      confirmAndDeleteCapsule(context, c);
 
   Future<void> _open(AppStore store, Capsule c) async {
     final needsBio = await _needsBio(store, c);
@@ -154,7 +120,7 @@ class _CapsuleListScreenState extends State<CapsuleListScreen> {
         ],
       );
     }
-    if (c.due) {
+    if (store.isDue(c)) {
       return _iconButton(Icons.lock_open_rounded, onTap: () => _open(store, c), accent: true);
     }
     return _iconButton(Icons.delete_outline, onTap: () => _confirmDelete(store, c));
@@ -289,10 +255,13 @@ class _CapsuleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final target = capsule.opened ? (capsule.openedAt ?? capsule.openAt) : capsule.openAt;
+    final store = AppScope.of(context);
+    final target = capsule.opened
+        ? (capsule.openedAt ?? capsule.openAt)
+        : store.openMomentOf(capsule);
     final sub = capsule.isDraft
         ? 'Draft · last edited ${fmtDay(capsule.createdAt)}'
-        : capsuleSubtitle(capsule);
+        : capsuleSubtitle(capsule, store.openMomentOf(capsule));
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,

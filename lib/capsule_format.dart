@@ -23,9 +23,11 @@ List<Color> capsuleGradient(int seed) {
 }
 
 /// "Opens 15 Sep 2026 · 3 days left" / "Opened 12 Jan 2026".
-String capsuleSubtitle(Capsule c) {
+/// [openMoment] is the capsule's open date at the user's preferred time —
+/// pass `store.openMomentOf(c)`.
+String capsuleSubtitle(Capsule c, DateTime openMoment) {
   if (!c.sealed) return 'Opened ${fmtDay(c.openedAt!)}';
-  final days = c.openAt.difference(DateTime.now()).inDays;
+  final days = openMoment.difference(DateTime.now()).inDays;
   String rel;
   if (days <= 0) {
     rel = 'opens today';
@@ -38,5 +40,5 @@ String capsuleSubtitle(Capsule c) {
     final m = ((days % 365) / 30).round();
     rel = m > 0 ? '$y y $m m left' : '$y y left';
   }
-  return 'Opens ${fmtDay(c.openAt)} · $rel';
+  return 'Opens ${fmtDay(openMoment)} · $rel';
 }

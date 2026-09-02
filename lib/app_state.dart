@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:flutter/widgets.dart';
 
 import 'db.dart';
@@ -20,6 +21,10 @@ class AppStore extends ChangeNotifier {
 
   AppBrightness _brightness = AppBrightness.light;
   DateTime? _birthday;
+  String? _name;
+  DateTime? _installedAt;
+  int _openHour = 8;
+  int _openMin = 0;
   bool _notificationsEnabled = false;
   bool _onboardingDone = false;
   String? _pin;
@@ -41,6 +46,17 @@ class AppStore extends ChangeNotifier {
     _brightness = s['brightness'] == 'dark' ? AppBrightness.dark : AppBrightness.light;
     C.set(_brightness);
     _birthday = _parseDate(s['birthday']);
+    _name = (s['name'] ?? '').trim().isEmpty ? null : s['name']!.trim();
+    _installedAt = _parseDate(s['installed_at']);
+    if (_installedAt == null) {
+      _installedAt = DateTime.now();
+      await db.setSetting('installed_at', _installedAt!.toIso8601String());
+    }
+    final t = (s['open_time'] ?? '').split(':');
+    if (t.length == 2) {
+      _openHour = (int.tryParse(t[0]) ?? 8).clamp(0, 23);
+      _openMin = (int.tryParse(t[1]) ?? 0).clamp(0, 59);
+    }
     // Default OFF: these only turn on once the user opts in *and* the OS grants
     // the capability. Earlier builds defaulted them ON and persisted '1', so a
     // one-time migration wipes that stale value.
@@ -84,7 +100,7 @@ class AppStore extends ChangeNotifier {
     if (db == null) return;
     var changed = false;
     for (final c in _capsules) {
-      if (c.sealed && c.due && !c.notified) {
+      if (isDue(c) && !c.notified) {
         await db.addNotification(
           capsuleId: c.id,
           title: '“${c.title}” is ready to open',
@@ -210,13 +226,58 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ---- Display name -------------------------------------------------
+  String? get name => _name;
+  String get displayName => _name ?? 'Guest';
+  bool get hasName => _name != null;
+
+  void setName(String? value) {
+    final t = value?.trim();
+    _name = (t == null || t.isEmpty) ? null : t;
+    _put('name', _name);
+    notifyListeners();
+  }
+
+  /// When the app first ran on this device. Falls back to the oldest capsule,
+  /// then to now, so it always resolves to something sensible.
+  DateTime get installedAt {
+    if (_installedAt != null) return _installedAt!;
+    DateTime? earliest;
+    for (final c in _capsules) {
+      if (earliest == null || c.createdAt.isBefore(earliest)) earliest = c.createdAt;
+    }
+    return earliest ?? DateTime.now();
+  }
+
+  // ---- Preferred open time (global) -------------------------------
+  TimeOfDay get openTime => TimeOfDay(hour: _openHour, minute: _openMin);
+  String get openTimeLabel =>
+      '${_openHour.toString().padLeft(2, '0')}:${_openMin.toString().padLeft(2, '0')}';
+
+  void setOpenTime(TimeOfDay t) {
+    _openHour = t.hour;
+    _openMin = t.minute;
+    _put('open_time', '${t.hour}:${t.minute}');
+    notifyListeners();
+  }
+
+  /// A capsule's open *date* combined with the current preferred time-of-day.
+  /// The stored time component is ignored, so changing the preference shifts
+  /// every capsule — sealed ones included — at once.
+  DateTime openMomentOf(Capsule c) =>
+      DateTime(c.openAt.year, c.openAt.month, c.openAt.day, _openHour, _openMin);
+
+  bool isDue(Capsule c) => c.sealed && !openMomentOf(c).isAfter(DateTime.now());
+
   // ---- Birthday ---------------------------------------------------------
   DateTime? get birthday => _birthday;
   bool get hasBirthday => _birthday != null;
 
+  /// Only month/day matter — the year is normalised to a constant so nothing
+  /// downstream can depend on it.
   void setBirthday(DateTime? date) {
-    _birthday = date;
-    _put('birthday', date?.toIso8601String());
+    _birthday = date == null ? null : DateTime(2000, date.month, date.day);
+    _put('birthday', _birthday?.toIso8601String());
     notifyListeners();
   }
 

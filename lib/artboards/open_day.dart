@@ -57,18 +57,36 @@ class OpenDayScreen extends StatelessWidget {
                 ),
                 Row(
                   children: [
-                    IconChip(
-                      size: 46,
-                      radius: 23,
-                      color: C.lav1,
-                      child: Icon(Icons.share_outlined, size: 19, color: C.ink),
+                    GestureDetector(
+                      onTap: () => showComingSoon(
+                        context,
+                        icon: Icons.share_outlined,
+                        title: 'Sharing is on the way',
+                        message:
+                            'Capsules live only on this device for now. Sharing a capsule you’ve opened arrives in a later update.',
+                      ),
+                      child: IconChip(
+                        size: 46,
+                        radius: 23,
+                        color: C.lav1,
+                        child: Icon(Icons.share_outlined, size: 19, color: C.ink),
+                      ),
                     ),
                     const SizedBox(width: 10),
-                    IconChip(
-                      size: 46,
-                      radius: 23,
-                      color: C.lav1,
-                      child: Icon(Icons.download_outlined, size: 19, color: C.ink),
+                    GestureDetector(
+                      onTap: () => showComingSoon(
+                        context,
+                        icon: Icons.download_outlined,
+                        title: 'Export is on the way',
+                        message:
+                            'Your note and its files stay on this device for now. Saving them out arrives in a later update.',
+                      ),
+                      child: IconChip(
+                        size: 46,
+                        radius: 23,
+                        color: C.lav1,
+                        child: Icon(Icons.download_outlined, size: 19, color: C.ink),
+                      ),
                     ),
                   ],
                 ),
@@ -150,6 +168,10 @@ class OpenDayScreen extends StatelessWidget {
                 ),
               ),
             ),
+            if (capsule != null) ...[
+              const SizedBox(height: 18),
+              Center(child: _DeleteTile(capsule: capsule)),
+            ],
           ],
         ),
       ),
@@ -212,6 +234,52 @@ class _ImageStrip extends StatelessWidget {
   }
 }
 
+/// A quiet "delete this capsule" affordance at the foot of an opened capsule.
+/// The weight of the decision lives in the confirmation, not this row.
+class _DeleteTile extends StatefulWidget {
+  const _DeleteTile({required this.capsule});
+  final Capsule capsule;
+
+  @override
+  State<_DeleteTile> createState() => _DeleteTileState();
+}
+
+class _DeleteTileState extends State<_DeleteTile> {
+  bool _busy = false;
+
+  Future<void> _run() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    final gone = await confirmAndDeleteCapsule(context, widget.capsule);
+    if (!mounted) return;
+    if (gone) {
+      back(context);
+    } else {
+      setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _run,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.delete_outline, size: 16, color: C.muted3),
+            const SizedBox(width: 7),
+            Text('Delete this capsule',
+                style: C.t(13.5, weight: FontWeight.w700, color: C.muted3)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _FileRow extends StatelessWidget {
   const _FileRow({required this.name, required this.kind});
   final String name;
@@ -225,22 +293,32 @@ class _FileRow extends StatelessWidget {
       'video' => Icons.movie_outlined,
       _ => Icons.insert_drive_file_outlined,
     };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(color: C.lav2, borderRadius: BorderRadius.circular(18)),
-      child: Row(
-        children: [
-          Icon(leading, size: 18, color: C.muted),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: C.t(13.5, weight: FontWeight.w600, color: C.ink)),
-          ),
-          Icon(playable ? Icons.play_circle_fill_rounded : Icons.download_outlined,
-              size: playable ? 22 : 17, color: C.muted3),
-        ],
+    return GestureDetector(
+      onTap: () => showComingSoon(
+        context,
+        icon: playable ? Icons.play_circle_outline_rounded : Icons.download_outlined,
+        title: playable ? 'Playback is on the way' : 'Export is on the way',
+        message: playable
+            ? 'This clip is saved with the capsule on your device. In-app playback arrives in a later update.'
+            : 'This file stays with the capsule on your device for now. Saving it out arrives in a later update.',
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(color: C.lav2, borderRadius: BorderRadius.circular(18)),
+        child: Row(
+          children: [
+            Icon(leading, size: 18, color: C.muted),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: C.t(13.5, weight: FontWeight.w600, color: C.ink)),
+            ),
+            Icon(playable ? Icons.play_circle_fill_rounded : Icons.download_outlined,
+                size: playable ? 22 : 17, color: C.muted3),
+          ],
+        ),
       ),
     );
   }

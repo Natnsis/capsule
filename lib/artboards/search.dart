@@ -159,7 +159,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       overflow: TextOverflow.ellipsis,
                       style: C.t(15.5, weight: FontWeight.w700, letterSpacing: -.01)),
                   const SizedBox(height: 2),
-                  Text(capsuleSubtitle(c),
+                  Text(capsuleSubtitle(c, AppScope.of(context).openMomentOf(c)),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: C.t(12.5, weight: FontWeight.w500, color: C.muted)),

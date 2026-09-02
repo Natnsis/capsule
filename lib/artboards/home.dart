@@ -61,7 +61,7 @@ class HomeScreen extends StatelessWidget {
                 if (store.wipePending) _WipeBanner(store: store),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(8, 24, 8, 0),
-                  child: Text('Hello, Bereket',
+                  child: Text('Hello, ${store.displayName}',
                       style: C.t(15, weight: FontWeight.w600, color: C.muted2)),
                 ),
                 Padding(
@@ -100,7 +100,7 @@ class HomeScreen extends StatelessWidget {
                           ? OpenDayScreen(title: featured.title, capsuleId: featured.id)
                           : SealedDetailScreen(capsuleId: featured.id, title: featured.title, openOn: featured.openAt),
                     ),
-                    child: _featuredCard(featured),
+                    child: _featuredCard(store, featured),
                   )
                 else
                   _emptyCard(context),
@@ -113,7 +113,7 @@ class HomeScreen extends StatelessWidget {
                           ? OpenDayScreen(title: c.title, capsuleId: c.id)
                           : SealedDetailScreen(capsuleId: c.id, title: c.title, openOn: c.openAt),
                     ),
-                    child: _capsuleRow(c),
+                    child: _capsuleRow(store, c),
                   ),
                 ],
               ],
@@ -180,11 +180,12 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _featuredCard(Capsule c) {
-    final daysLeft = c.openAt.difference(DateTime.now()).inDays;
+  Widget _featuredCard(AppStore store, Capsule c) {
+    final moment = store.openMomentOf(c);
+    final daysLeft = moment.difference(DateTime.now()).inDays;
     final opensBadge = c.opened
         ? 'Opened ${fmtDay(c.openedAt ?? c.openAt)}'
-        : c.due
+        : store.isDue(c)
             ? 'Ready to open'
             : daysLeft <= 0
                 ? 'Opens today'
@@ -283,9 +284,9 @@ class HomeScreen extends StatelessWidget {
                             children: [
                               Text('OPENS',
                                   style: C.t(11, weight: FontWeight.w700, color: C.violetInk, letterSpacing: .1)),
-                              Text('${_mon3(c.openAt.month)} ${c.openAt.day}',
+                              Text('${_mon3(moment.month)} ${moment.day}',
                                   style: C.t(26, weight: FontWeight.w800, letterSpacing: -.02, color: C.ink2, height: 1.1)),
-                              Text('${c.openAt.year} · 08:00',
+                              Text('${moment.year} · ${store.openTimeLabel}',
                                   style: C.t(12, weight: FontWeight.w600, color: C.violetInk)),
                             ],
                           ),
@@ -325,8 +326,8 @@ class HomeScreen extends StatelessWidget {
         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
       ][m - 1];
 
-  Widget _capsuleRow(Capsule c) {
-    final target = c.sealed ? c.openAt : (c.openedAt ?? c.openAt);
+  Widget _capsuleRow(AppStore store, Capsule c) {
+    final target = c.sealed ? store.openMomentOf(c) : (c.openedAt ?? c.openAt);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(color: C.glass, borderRadius: BorderRadius.circular(28)),
@@ -356,7 +357,7 @@ class HomeScreen extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: C.t(16, weight: FontWeight.w700, letterSpacing: -.01)),
                 const SizedBox(height: 2),
-                Text(capsuleSubtitle(c),
+                Text(capsuleSubtitle(c, store.openMomentOf(c)),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: C.t(13, weight: FontWeight.w500, color: C.muted)),
