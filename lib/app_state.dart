@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart' show TimeOfDay;
@@ -90,7 +91,32 @@ class AppStore extends ChangeNotifier {
 
     await _emitDueNotifications();
     _feed = await db.allNotifications();
+    await _syncScheduledNotifications();
     notifyListeners();
+  }
+
+  /// Reconciles the OS's pending alarms with the current capsules: one alarm per
+  /// still-sealed capsule with a future open moment, none for the rest. Cheap
+  /// and idempotent — safe to call after any change that moves an open moment
+  /// (sealing, opening, deleting, editing the global open-time, or toggling
+  /// notifications). This is what makes an opening fire while the app is closed.
+  Future<void> _syncScheduledNotifications() async {
+    if (_db == null) return; // demo / tests: nothing to schedule
+    final now = DateTime.now();
+    for (final c in _capsules) {
+      final wants =
+          _notificationsEnabled && c.sealed && openMomentOf(c).isAfter(now);
+      if (wants) {
+        await Notifier.instance.schedule(
+          id: c.id,
+          title: '“${c.title}” is ready to open',
+          body: 'Your capsule’s open day has arrived. Tap to unlock.',
+          when: openMomentOf(c),
+        );
+      } else {
+        await Notifier.instance.cancel(c.id);
+      }
+    }
   }
 
   /// Any sealed capsule whose day has arrived and hasn't been announced yet
@@ -169,6 +195,8 @@ class AppStore extends ChangeNotifier {
   void setNotificationsEnabled(bool value) {
     _notificationsEnabled = value;
     _put('notifications', value ? '1' : '0');
+    // Turning it on schedules alarms for pending capsules; off clears them.
+    unawaited(_syncScheduledNotifications());
     notifyListeners();
   }
 
@@ -258,6 +286,8 @@ class AppStore extends ChangeNotifier {
     _openHour = t.hour;
     _openMin = t.minute;
     _put('open_time', '${t.hour}:${t.minute}');
+    // Every capsule's open moment just moved — reschedule their alarms.
+    unawaited(_syncScheduledNotifications());
     notifyListeners();
   }
 
@@ -377,6 +407,7 @@ class AppStore extends ChangeNotifier {
             bioSealed: bioSealed);
       }
       _capsules = await _db.allCapsules();
+      await _syncScheduledNotifications();
       notifyListeners();
       return c;
     }
@@ -394,6 +425,7 @@ class AppStore extends ChangeNotifier {
       );
       _capsules = await _db.allCapsules();
       _feed = await _db.allNotifications();
+      await Notifier.instance.cancel(c.id);
       notifyListeners();
       return c;
     }
@@ -407,11 +439,15 @@ class AppStore extends ChangeNotifier {
 
   Future<void> deleteCapsule(int id) async {
     await _db?.deleteCapsule(id);
+    await Notifier.instance.cancel(id);
     _capsules = _capsules.where((c) => c.id != id).toList();
     notifyListeners();
   }
 
   Future<void> deleteAllCapsules() async {
+    for (final c in _capsules) {
+      await Notifier.instance.cancel(c.id);
+    }
     await _db?.deleteAllCapsules();
     _capsules = const [];
     if (_wipeArmedAt != null) {

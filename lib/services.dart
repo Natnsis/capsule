@@ -134,8 +134,49 @@ class Notifier {
     linux: LinuxNotificationDetails(),
   );
 
+  AndroidFlutterLocalNotificationsPlugin? get _android => _plugin
+      .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+
+  /// Whether the OS will honour exact-time alarms for this app. Android 14+
+  /// denies "Alarms & reminders" by default; on 12–13 it's on unless revoked.
+  /// Non-Android platforms schedule exactly anyway → true.
+  Future<bool> canScheduleExact() async {
+    if (!Platform.isAndroid) return true;
+    try {
+      return (await _android?.canScheduleExactNotifications()) ?? true;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  /// Opens the system "Alarms & reminders" screen so the user can allow exact
+  /// alarms. No-op off Android.
+  Future<void> requestExactAlarm() async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _android?.requestExactAlarmsPermission();
+    } catch (_) {}
+  }
+
+  /// Asks the OS to exempt the app from battery optimisation — aggressive OEM
+  /// power managers (Xiaomi, Huawei, Oppo…) otherwise defer or drop the alarm.
+  /// Returns true when the app is (now) exempt.
+  Future<bool> requestBatteryException() async {
+    if (!Platform.isAndroid) return true;
+    try {
+      if (await Permission.ignoreBatteryOptimizations.isGranted) return true;
+      final res = await Permission.ignoreBatteryOptimizations.request();
+      return res.isGranted;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Hands the OS a one-shot alarm that fires at [when] even if the app is
-  /// closed. [id] is stable per capsule, so scheduling again replaces the
+  /// closed or swiped away. Uses an exact ("alarm clock") alarm when the OS
+  /// allows it, falling back to an inexact one otherwise so a notification
+  /// still lands. [id] is stable per capsule, so scheduling again replaces the
   /// pending alarm rather than stacking a duplicate. A [when] in the past just
   /// shows the notification now.
   Future<void> schedule({
@@ -150,17 +191,29 @@ class Notifier {
       await show(title, body);
       return;
     }
+    // Schedule by absolute instant; the UTC location keeps the epoch exact
+    // without needing the device's IANA zone name.
+    final at = tz.TZDateTime.from(when.toUtc(), tz.UTC);
+    final exact = await canScheduleExact();
+    Future<void> put(AndroidScheduleMode mode) => _plugin.zonedSchedule(
+          id: id,
+          title: title,
+          body: body,
+          scheduledDate: at,
+          notificationDetails: _details,
+          androidScheduleMode: mode,
+        );
     try {
-      await _plugin.zonedSchedule(
-        id: id,
-        title: title,
-        body: body,
-        // Schedule by absolute instant; the UTC location keeps the epoch exact
-        // without needing the device's IANA zone name.
-        scheduledDate: tz.TZDateTime.from(when.toUtc(), tz.UTC),
-        notificationDetails: _details,
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      );
+      await put(exact
+          ? AndroidScheduleMode.exactAllowWhileIdle
+          : AndroidScheduleMode.inexactAllowWhileIdle);
+    } on PlatformException catch (e) {
+      // Exact permission was pulled between the check and the call.
+      if (e.code == 'exact_alarms_not_permitted') {
+        try {
+          await put(AndroidScheduleMode.inexactAllowWhileIdle);
+        } catch (_) {}
+      }
     } catch (_) {}
   }
 
@@ -216,13 +269,7 @@ class Notifier {
         id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
         title: title,
         body: body,
-        notificationDetails: const NotificationDetails(
-          android: AndroidNotificationDetails('capsule_due', 'Capsule reminders',
-              importance: Importance.high, priority: Priority.high),
-          iOS: DarwinNotificationDetails(),
-          macOS: DarwinNotificationDetails(),
-          linux: LinuxNotificationDetails(),
-        ),
+        notificationDetails: _details,
       );
     } catch (_) {}
   }

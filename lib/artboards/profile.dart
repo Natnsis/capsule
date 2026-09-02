@@ -29,6 +29,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   // reflect `stored preference AND this` — never just the stored bool.
   bool _notifGranted = false;
   bool _bioEnrolled = false;
+  bool _exactAlarms = true; // Android: may the OS fire exact-time alarms?
 
   @override
   void initState() {
@@ -52,6 +53,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   Future<void> _syncPermissions() async {
     final granted = await Notifier.instance.isGranted;
     final enrolled = await Biometrics.instance.isEnrolled;
+    final exact = await Notifier.instance.canScheduleExact();
     if (!mounted) return;
     final store = AppScope.read(context);
     // If the OS capability is gone, drop the stored opt-in so the two stay in
@@ -61,7 +63,22 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
     setState(() {
       _notifGranted = granted;
       _bioEnrolled = enrolled;
+      _exactAlarms = exact;
     });
+  }
+
+  /// Walks the user through the two OS grants that make a scheduled open-day
+  /// alert behave like an alarm: "Alarms & reminders", then a battery-
+  /// optimisation exemption. Safe to call repeatedly — each is a no-op once held.
+  Future<void> _tuneAlarmReliability({bool announce = false}) async {
+    if (!await Notifier.instance.canScheduleExact()) {
+      if (announce) {
+        _toast('Allow “Alarms & reminders” so open-day alerts fire on time.');
+      }
+      await Notifier.instance.requestExactAlarm();
+    }
+    await Notifier.instance.requestBatteryException();
+    await _syncPermissions();
   }
 
   void _toast(String msg) {
@@ -235,6 +252,20 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
                     ),
                     onTap: _toggleNotifications,
                   ),
+                  if (Platform.isAndroid && notifOn) ...[
+                    _divider(),
+                    _settingRow(
+                      Icon(Icons.alarm, size: 19, color: C.ink),
+                      'Exact open-day alerts',
+                      _exactAlarms
+                          ? 'On · fires at the open time, even if the app is closed'
+                          : 'Off · alerts may be delayed — tap to allow',
+                      trailing: _exactAlarms
+                          ? Icon(Icons.check_rounded, size: 18, color: C.muted3)
+                          : Icon(Icons.chevron_right, size: 18, color: C.muted3),
+                      onTap: () => _tuneAlarmReliability(announce: true),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -312,6 +343,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
     final granted = await Notifier.instance.request();
     if (granted) {
       store.setNotificationsEnabled(true);
+      await _tuneAlarmReliability(announce: true);
     } else if (await Notifier.instance.isPermanentlyDenied) {
       _toast('Allow notifications for Capsule in Settings, then come back.');
       await Notifier.instance.openSettings();
