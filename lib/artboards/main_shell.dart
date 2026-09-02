@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import '../nav.dart';
 import '../app_state.dart';
+import '../services.dart';
 import '../tokens.dart';
 import '../widgets/common.dart';
 import 'home.dart';
@@ -20,6 +23,75 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   late int _index = widget.initialIndex;
+
+  /// The setup nudge is checked once per app run, no matter how many times the
+  /// shell is rebuilt into the root (sealing a capsule does that).
+  static bool _nudgeCheckedThisRun = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeNudgeSetup());
+  }
+
+  /// A light "finish setting up Capsule" sheet listing only the switches that
+  /// are still off — biometric unlock, notifications, exact open-day alerts.
+  /// Tapping through drops the user on the Profile tab where every toggle lives.
+  Future<void> _maybeNudgeSetup() async {
+    if (_nudgeCheckedThisRun || !mounted) return;
+    _nudgeCheckedThisRun = true;
+    // Only phones have these OS gates to grant.
+    if (!Platform.isAndroid && !Platform.isIOS) return;
+
+    final store = AppScope.read(context);
+    final snoozed = store.permNudgeSnoozedAt;
+    if (snoozed != null &&
+        DateTime.now().difference(snoozed) < const Duration(days: 4)) {
+      return; // asked recently — stay quiet
+    }
+
+    final bioAvailable = await Biometrics.instance.isAvailable;
+    final bioOn = store.biometricEnabled && await Biometrics.instance.isEnrolled;
+    final notifOn =
+        store.notificationsEnabled && await Notifier.instance.isGranted;
+    final exactOn =
+        !Platform.isAndroid || await Notifier.instance.canScheduleExact();
+
+    final missing = <String>[
+      if (bioAvailable && !bioOn) 'fingerprint unlock',
+      if (!notifOn) 'notifications',
+      if (Platform.isAndroid && !exactOn) 'exact open-day alerts',
+    ];
+    if (missing.isEmpty || !mounted) return;
+
+    final one = missing.length == 1;
+    final showTest = !notifOn || (Platform.isAndroid && !exactOn);
+    final go = await showMiniSheet(
+      context,
+      icon: Icons.tune_rounded,
+      badge: 'FINISH SETUP',
+      title: one ? 'One switch left for Capsule' : 'Capsule isn’t fully set up',
+      message: one
+          ? 'Turn on ${_readableList(missing)} so Capsule works the way it should.'
+          : 'Turn on ${_readableList(missing)} so a capsule can reach you the '
+              'moment it opens — even with the app closed.',
+      tip: showTest
+          ? 'After enabling, run “Test background alert” in your profile to '
+              'watch a real open-day alert land.'
+          : null,
+      cta: 'Take me there',
+      dismissLabel: 'Later',
+    );
+    store.snoozePermissionNudge();
+    if (go && mounted) setState(() => _index = 2);
+  }
+
+  /// "a", "a and b", "a, b, and c".
+  static String _readableList(List<String> xs) {
+    if (xs.length == 1) return xs.first;
+    if (xs.length == 2) return '${xs[0]} and ${xs[1]}';
+    return '${xs.sublist(0, xs.length - 1).join(', ')}, and ${xs.last}';
+  }
 
   @override
   Widget build(BuildContext context) {

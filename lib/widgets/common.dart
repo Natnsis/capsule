@@ -631,3 +631,146 @@ Future<void> showComingSoon(
     ),
   );
 }
+
+/// A compact, easily-dismissed bottom sheet — a gentle nudge, not a gate. Same
+/// gradient-card language as [showComingSoon] but lighter, with a quiet "later"
+/// link under the action. Returns true only when the primary [cta] is tapped;
+/// a swipe-away or the quiet link returns false.
+Future<bool> showMiniSheet(
+  BuildContext context, {
+  required IconData icon,
+  required String badge,
+  required String title,
+  required String message,
+  required String cta,
+  String? tip,
+  String dismissLabel = 'Later',
+}) async {
+  final result = await showModalBottomSheet<bool>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) => Padding(
+      padding: const EdgeInsets.all(12),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(34),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [C.card1, C.card3],
+            ),
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                right: -46,
+                bottom: -56,
+                child: Blob(
+                  size: 160,
+                  opacity: C.isDark ? .5 : .9,
+                  center: const Alignment(-0.3, -0.4),
+                  colors: const [Color(0xFFF6DCE2), Color(0xFF7E4FAE)],
+                ),
+              ),
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 12, 22, 14),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: C.ink2.withValues(alpha: .18),
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            height: 26,
+                            padding: const EdgeInsets.symmetric(horizontal: 11),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: C.glass,
+                              borderRadius: BorderRadius.circular(13),
+                            ),
+                            child: Text(badge,
+                                style: C.t(11.5,
+                                    weight: FontWeight.w800,
+                                    color: C.ink2,
+                                    letterSpacing: .08)),
+                          ),
+                          Icon(icon, size: 20, color: C.ink2),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Text(title,
+                          style: C.t(20,
+                              weight: FontWeight.w800,
+                              letterSpacing: -.02,
+                              color: C.ink2)),
+                      const SizedBox(height: 6),
+                      Text(message, style: C.t(13.5, color: C.ink2, height: 1.55)),
+                      if (tip != null) ...[
+                        const SizedBox(height: 10),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.lightbulb_outline_rounded,
+                                size: 15, color: C.ink2),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(tip,
+                                  style: C.t(12.5,
+                                      weight: FontWeight.w500,
+                                      color: C.ink2,
+                                      height: 1.5)),
+                            ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 16),
+                      GestureDetector(
+                        onTap: () => Navigator.of(ctx).pop(true),
+                        child: Container(
+                          height: 48,
+                          width: double.infinity,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: C.glassSoft,
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: Text(cta,
+                              style: C.t(14.5,
+                                  weight: FontWeight.w700, color: C.ink2)),
+                        ),
+                      ),
+                      Center(
+                        child: TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(false),
+                          child: Text(dismissLabel,
+                              style: C.t(13,
+                                  weight: FontWeight.w600, color: C.ink2)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+  return result ?? false;
+}

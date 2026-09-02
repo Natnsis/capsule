@@ -71,6 +71,22 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   }
 
   Future<void> _sendSelfTest() async {
+    // Explain what the test proves before scheduling it, so a stray
+    // notification a minute later isn't a surprise.
+    final go = await showMiniSheet(
+      context,
+      icon: Icons.notifications_active_outlined,
+      badge: 'BACKGROUND TEST',
+      title: 'Check alerts survive a closed app',
+      message: 'Capsule will schedule one throwaway alert for about a minute '
+          'from now. Close the app fully after tapping — if the alert still '
+          'arrives, your real open-day alerts will too.',
+      tip: 'Nothing is sent to anyone. It’s a single local notification you '
+          'can dismiss.',
+      cta: 'Schedule the test',
+      dismissLabel: 'Not now',
+    );
+    if (!go) return;
     await Notifier.instance.scheduleSelfTest();
     _toast('Now close Capsule completely. A test alert should arrive in ~1 min.');
     await _syncPermissions();

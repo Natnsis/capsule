@@ -27,6 +27,7 @@ class AppStore extends ChangeNotifier {
   int _openHour = 8;
   int _openMin = 0;
   bool _notificationsEnabled = false;
+  DateTime? _permNudgeSnoozedAt;
   bool _onboardingDone = false;
   String? _pin;
   DateTime? _wipeArmedAt;
@@ -71,6 +72,7 @@ class AppStore extends ChangeNotifier {
       _notificationsEnabled = s['notifications'] == '1';
       _biometricEnabled = s['biometric'] == '1';
     }
+    _permNudgeSnoozedAt = _parseDate(s['perm_nudge_snoozed_at']);
     _onboardingDone = s['onboarding_done'] == '1';
     final pin = s['pin'] ?? '';
     _pin = pin.isEmpty ? null : pin;
@@ -201,6 +203,15 @@ class AppStore extends ChangeNotifier {
     // Turning it on schedules alarms for pending capsules; off clears them.
     unawaited(_syncScheduledNotifications());
     notifyListeners();
+  }
+
+  // ---- Setup nudge (gentle, dismissable) --------------------------
+  /// When the "finish setting up" sheet was last shown/dismissed. The shell
+  /// stays quiet for a few days after, then nudges again while anything is off.
+  DateTime? get permNudgeSnoozedAt => _permNudgeSnoozedAt;
+  void snoozePermissionNudge() {
+    _permNudgeSnoozedAt = DateTime.now();
+    _put('perm_nudge_snoozed_at', _permNudgeSnoozedAt!.toIso8601String());
   }
 
   // ---- Biometric sealing preference ----------------------------
