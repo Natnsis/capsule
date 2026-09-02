@@ -334,6 +334,7 @@ class _CountdownCardState extends State<_CountdownCard>
       builder: (context, child) {
         final t = _live ? Curves.easeInOut.transform(_pulse.value) : 0.0;
         final card = Container(
+          width: double.infinity,
           padding: const EdgeInsets.all(22),
           decoration: BoxDecoration(
             color: C.glass,

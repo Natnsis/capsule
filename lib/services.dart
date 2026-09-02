@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:timezone/data/latest_all.dart' as tzdata;
+import 'package:timezone/timezone.dart' as tz;
 
 import 'tokens.dart';
 
@@ -107,6 +109,7 @@ class Notifier {
   Future<void> init() async {
     if (_inited) return;
     try {
+      tzdata.initializeTimeZones();
       await _plugin.initialize(
         settings: const InitializationSettings(
           android: AndroidInitializationSettings('@mipmap/ic_launcher'),
@@ -122,6 +125,54 @@ class Notifier {
   }
 
   bool get _hasOsGate => Platform.isAndroid || Platform.isIOS;
+
+  static const _details = NotificationDetails(
+    android: AndroidNotificationDetails('capsule_due', 'Capsule reminders',
+        importance: Importance.high, priority: Priority.high),
+    iOS: DarwinNotificationDetails(),
+    macOS: DarwinNotificationDetails(),
+    linux: LinuxNotificationDetails(),
+  );
+
+  /// Hands the OS a one-shot alarm that fires at [when] even if the app is
+  /// closed. [id] is stable per capsule, so scheduling again replaces the
+  /// pending alarm rather than stacking a duplicate. A [when] in the past just
+  /// shows the notification now.
+  Future<void> schedule({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime when,
+  }) async {
+    await init();
+    if (!_inited || !_hasOsGate) return;
+    if (!when.isAfter(DateTime.now())) {
+      await show(title, body);
+      return;
+    }
+    try {
+      await _plugin.zonedSchedule(
+        id: id,
+        title: title,
+        body: body,
+        // Schedule by absolute instant; the UTC location keeps the epoch exact
+        // without needing the device's IANA zone name.
+        scheduledDate: tz.TZDateTime.from(when.toUtc(), tz.UTC),
+        notificationDetails: _details,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      );
+    } catch (_) {}
+  }
+
+  /// Drops a pending scheduled alarm (capsule opened, deleted, or its date /
+  /// the global open-time changed).
+  Future<void> cancel(int id) async {
+    await init();
+    if (!_inited) return;
+    try {
+      await _plugin.cancel(id: id);
+    } catch (_) {}
+  }
 
   Future<bool> get isGranted async {
     try {
